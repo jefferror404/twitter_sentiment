@@ -1,0 +1,59 @@
+# API Keys and Sensitive Data - UPDATED
+config_working_backup.py        # ← Your real keys (local only)
+config_original.py              # ← Any other backups with real keys
+.env
+secrets.toml
+
+# Streamlit secrets (local development)
+.streamlit/secrets.toml
+
+# NOTE: config.py is NOT excluded - it contains safe placeholder keys for GitHub
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+crypto_analyzer_env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Data files (if sensitive) - COMMENT OUT if you want Excel file in GitHub
+# data/project_twitter.xlsx
+
+# Logs
+*.log
