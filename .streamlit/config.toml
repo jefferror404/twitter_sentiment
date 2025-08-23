@@ -1,0 +1,11 @@
+[server]
+# Disable file watcher to prevent inotify limit errors
+fileWatcherType = "none"
+
+[global]
+# Disable warning about running script directly
+showWarningOnDirectExecution = false
+
+[logger]
+# Set logging level for cleaner logs
+level = "info"
