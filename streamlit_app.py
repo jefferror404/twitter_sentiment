@@ -34,7 +34,7 @@ st.markdown("""
         margin: 1rem 0;
     }
     .sentiment-positive {
-        color: #28a745;
+        color: #43946c;
         font-weight: bold;
     }
     .sentiment-negative {
@@ -44,6 +44,80 @@ st.markdown("""
     .sentiment-neutral {
         color: #6c757d;
         font-weight: bold;
+    }
+    
+    /* 🆕 Custom button styling */
+    .stButton > button {
+        background-color: #43946c !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 500 !important;
+    }
+    .stButton > button:hover {
+        background-color: #367a55 !important;
+        color: white !important;
+    }
+    .stButton > button:focus {
+        background-color: #43946c !important;
+        color: white !important;
+        box-shadow: none !important;
+    }
+    
+    /* 🆕 Enhanced sentiment bar styling */
+    .sentiment-bar {
+        height: 50px;
+        border-radius: 12px;
+        overflow: hidden;
+        display: flex;
+        margin: 15px 0;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        border: 2px solid #e9ecef;
+    }
+    .sentiment-positive-bar {
+        background-color: #43946c;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 14px;
+        padding: 0 8px;
+        text-align: center;
+        min-width: 0;
+    }
+    .sentiment-negative-bar {
+        background-color: #dc3545;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 14px;
+        padding: 0 8px;
+        text-align: center;
+        min-width: 0;
+    }
+    .sentiment-neutral-bar {
+        background-color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 14px;
+        padding: 0 8px;
+        text-align: center;
+        min-width: 0;
+    }
+    
+    /* Hide text when bar is too small */
+    .sentiment-bar > div[style*="width: 0%"], 
+    .sentiment-bar > div[style*="width: 1%"], 
+    .sentiment-bar > div[style*="width: 2%"],
+    .sentiment-bar > div[style*="width: 3%"],
+    .sentiment-bar > div[style*="width: 4%"] {
+        font-size: 0px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -102,14 +176,35 @@ def capture_analysis_output(token_symbol):
         error_msg = f"💥 分析过程中出现错误: {str(e)}\n{traceback.format_exc()}"
         return None, error_msg
 
-def format_sentiment_display(sentiment, count, percentage):
-    """Format sentiment with colored styling"""
-    if sentiment == "POSITIVE":
-        return f'<span class="sentiment-positive">✅ 正面: {count} 条 ({percentage:.1f}%)</span>'
-    elif sentiment == "NEGATIVE":
-        return f'<span class="sentiment-negative">❌ 负面: {count} 条 ({percentage:.1f}%)</span>'
-    else:
-        return f'<span class="sentiment-neutral">⚪ 中性: {count} 条 ({percentage:.1f}%)</span>'
+def create_enhanced_sentiment_bar_chart(sentiment_summary):
+    """🆕 Create an enhanced proportional sentiment bar chart with detailed text inside bars"""
+    total = sum(sentiment_summary.values())
+    if total == 0:
+        return ""
+    
+    pos_count = sentiment_summary.get('POSITIVE', 0)
+    neg_count = sentiment_summary.get('NEGATIVE', 0)
+    neu_count = sentiment_summary.get('NEUTRAL', 0)
+    
+    pos_pct = (pos_count / total * 100)
+    neg_pct = (neg_count / total * 100)
+    neu_pct = (neu_count / total * 100)
+    
+    # Create HTML bar chart with detailed text inside each bar
+    bar_html = f"""
+    <div class="sentiment-bar">
+        <div class="sentiment-positive-bar" style="width: {pos_pct}%;">
+            ✅ 正面: {pos_count} 条 ({pos_pct:.1f}%)
+        </div>
+        <div class="sentiment-negative-bar" style="width: {neg_pct}%;">
+            ❌ 负面: {neg_count} 条 ({neg_pct:.1f}%)
+        </div>
+        <div class="sentiment-neutral-bar" style="width: {neu_pct}%;">
+            ⚪ 中性: {neu_count} 条 ({neu_pct:.1f}%)
+        </div>
+    </div>
+    """
+    return bar_html
 
 def parse_table_from_output(output_text, table_title):
     """🆕 Parse table data directly from raw output text"""
@@ -184,25 +279,14 @@ def display_analysis_results(analysis_result, output_text):
         for info in price_info:
             st.text(info)
     
-    # Display sentiment distribution (Text only, no chart)
+    # 🆕 Display enhanced sentiment distribution (only bar chart)
     sentiment_summary = analysis_result.get('sentiment_summary', {})
     if sentiment_summary:
         st.markdown("### 🎭 情绪分布")
-        total = sum(sentiment_summary.values())
         
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            pos_pct = (sentiment_summary.get('POSITIVE', 0) / total * 100) if total > 0 else 0
-            st.markdown(format_sentiment_display("POSITIVE", sentiment_summary.get('POSITIVE', 0), pos_pct), unsafe_allow_html=True)
-        
-        with col2:
-            neg_pct = (sentiment_summary.get('NEGATIVE', 0) / total * 100) if total > 0 else 0
-            st.markdown(format_sentiment_display("NEGATIVE", sentiment_summary.get('NEGATIVE', 0), neg_pct), unsafe_allow_html=True)
-        
-        with col3:
-            neu_pct = (sentiment_summary.get('NEUTRAL', 0) / total * 100) if total > 0 else 0
-            st.markdown(format_sentiment_display("NEUTRAL", sentiment_summary.get('NEUTRAL', 0), neu_pct), unsafe_allow_html=True)
+        # Only show the enhanced bar chart with detailed text inside
+        enhanced_bar_chart_html = create_enhanced_sentiment_bar_chart(sentiment_summary)
+        st.markdown(enhanced_bar_chart_html, unsafe_allow_html=True)
     
     # Display AI summary
     ai_summary_started = False
@@ -378,7 +462,7 @@ def main():
     st.markdown("---")
     st.markdown(
         "<div style='text-align: center; color: #666;'>"
-        "🚀 Crypto Twitter Sentiment Analyzer | Powered by Terminode "
+        "🚀 Crypto Twitter Sentiment Analyzer | Powered by Terminode"
         "</div>", 
         unsafe_allow_html=True
     )
