@@ -46,7 +46,7 @@ st.markdown("""
         font-weight: bold;
     }
     
-    /* 🆕 Custom button styling */
+    /* Custom button styling */
     .stButton > button {
         background-color: #43946c !important;
         color: white !important;
@@ -64,7 +64,7 @@ st.markdown("""
         box-shadow: none !important;
     }
     
-    /* 🆕 Enhanced sentiment bar styling */
+    /* Enhanced sentiment bar styling */
     .sentiment-bar {
         height: 50px;
         border-radius: 12px;
@@ -85,6 +85,8 @@ st.markdown("""
         padding: 0 8px;
         text-align: center;
         min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
     }
     .sentiment-negative-bar {
         background-color: #dc3545;
@@ -97,6 +99,8 @@ st.markdown("""
         padding: 0 8px;
         text-align: center;
         min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
     }
     .sentiment-neutral-bar {
         background-color: #6c757d;
@@ -109,16 +113,96 @@ st.markdown("""
         padding: 0 8px;
         text-align: center;
         min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
     }
     
-    /* Hide text when bar is too small */
-    .sentiment-bar > div[style*="width: 0%"], 
-    .sentiment-bar > div[style*="width: 1%"], 
-    .sentiment-bar > div[style*="width: 2%"],
-    .sentiment-bar > div[style*="width: 3%"],
-    .sentiment-bar > div[style*="width: 4%"] {
-        font-size: 0px;
+    /* 🔧 FIX: Sidebar toggle button - hide the "keyboard_double_arrow_right" text */
+    button[data-testid="baseButton-header"] span {
+        display: none !important;
     }
+    
+    /* Replace with proper arrow using CSS */
+    button[data-testid="baseButton-header"] {
+        position: relative !important;
+        width: 2.25rem !important;
+        height: 2.25rem !important;
+    }
+    
+    button[data-testid="baseButton-header"]:after {
+        content: "»" !important;
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
+        color: #666 !important;
+        font-family: system-ui, -apple-system, sans-serif !important;
+    }
+    
+    /* When sidebar is open, show left arrow */
+    .css-1d391kg button[data-testid="baseButton-header"]:after {
+        content: "«" !important;
+    }
+    
+    /* 🔧 FIX: Expander arrow icons - hide the problematic arrows */
+    .streamlit-expanderHeader svg {
+        display: none !important;
+    }
+    
+    /* Add custom arrows for expanders */
+    .streamlit-expanderHeader:after {
+        content: "▶" !important;
+        margin-left: 0.5rem !important;
+        font-size: 14px !important;
+        transition: transform 0.2s ease !important;
+        color: #666 !important;
+    }
+    
+    details[open] .streamlit-expanderHeader:after {
+        content: "▼" !important;
+        transform: none !important;
+    }
+    
+    /* Alternative sidebar toggle selectors (in case the above doesn't work) */
+    button[kind="header"] span,
+    button[title*="sidebar"] span {
+        display: none !important;
+    }
+    
+    button[kind="header"]:after,
+    button[title*="Open"]:after {
+        content: "»" !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
+        color: #666 !important;
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+    }
+    
+    button[title*="Close"]:after {
+        content: "«" !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
+        color: #666 !important;
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+    }
+    
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .sentiment-positive-bar, .sentiment-negative-bar, .sentiment-neutral-bar {
+            font-size: 12px;
+        }
+    }
+    
+    /* Remove the problematic small bar text hiding - we'll handle this programmatically */
+    /* No more width-based text hiding rules */
 </style>
 """, unsafe_allow_html=True)
 
