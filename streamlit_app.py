@@ -261,7 +261,7 @@ def capture_analysis_output(token_symbol):
         return None, error_msg
 
 def create_enhanced_sentiment_bar_chart(sentiment_summary):
-    """🆕 Create an enhanced proportional sentiment bar chart with detailed text inside bars"""
+    """🆕 Create an enhanced proportional sentiment bar chart with smart text display"""
     total = sum(sentiment_summary.values())
     if total == 0:
         return ""
@@ -274,21 +274,47 @@ def create_enhanced_sentiment_bar_chart(sentiment_summary):
     neg_pct = (neg_count / total * 100)
     neu_pct = (neu_count / total * 100)
     
-    # Create HTML bar chart with detailed text inside each bar
+    # Smart text display - only show full text if percentage is above 8%
+    def get_bar_text(emoji, label, count, pct, min_threshold=8):
+        if pct >= min_threshold:
+            return f"{emoji} {label}: {count} 条 ({pct:.1f}%)"
+        elif pct > 0:
+            return f"{emoji}"  # Just emoji for small bars
+        else:
+            return ""
+    
+    pos_text = get_bar_text("✅", "正面", pos_count, pos_pct)
+    neg_text = get_bar_text("❌", "负面", neg_count, neg_pct)
+    neu_text = get_bar_text("⚪", "中性", neu_count, neu_pct)
+    
+    # Create the bar chart
     bar_html = f"""
     <div class="sentiment-bar">
         <div class="sentiment-positive-bar" style="width: {pos_pct}%;">
-            ✅ 正面: {pos_count} 条 ({pos_pct:.1f}%)
+            {pos_text}
         </div>
         <div class="sentiment-negative-bar" style="width: {neg_pct}%;">
-            ❌ 负面: {neg_count} 条 ({neg_pct:.1f}%)
+            {neg_text}
         </div>
         <div class="sentiment-neutral-bar" style="width: {neu_pct}%;">
-            ⚪ 中性: {neu_count} 条 ({neu_pct:.1f}%)
+            {neu_text}
         </div>
     </div>
     """
-    return bar_html
+    
+    # Add summary text below for clarity
+    summary_parts = []
+    if pos_count > 0: summary_parts.append(f"✅ 正面: {pos_count} 条 ({pos_pct:.1f}%)")
+    if neg_count > 0: summary_parts.append(f"❌ 负面: {neg_count} 条 ({neg_pct:.1f}%)")
+    if neu_count > 0: summary_parts.append(f"⚪ 中性: {neu_count} 条 ({neu_pct:.1f}%)")
+    
+    summary_html = f"""
+    <div style="text-align: center; margin-top: 10px; font-size: 14px; color: #666; padding: 10px; background-color: #f8f9fa; border-radius: 8px;">
+        {" | ".join(summary_parts)}
+    </div>
+    """
+    
+    return bar_html + summary_html
 
 def parse_table_from_output(output_text, table_title):
     """🆕 Parse table data directly from raw output text"""
