@@ -117,6 +117,52 @@ st.markdown("""
         overflow: hidden;
     }
     
+    /* Price data styling */
+    .price-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        padding: 20px;
+        margin: 20px 0;
+        color: white;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    }
+    
+    .price-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .price-item {
+        background: rgba(255,255,255,0.1);
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.2);
+    }
+    
+    .price-label {
+        font-size: 14px;
+        opacity: 0.8;
+        margin-bottom: 5px;
+    }
+    
+    .price-value {
+        font-size: 18px;
+        font-weight: bold;
+        color: #fff;
+    }
+    
+    .price-positive {
+        color: #4ade80 !important;
+    }
+    
+    .price-negative {
+        color: #f87171 !important;
+    }
+    
     /* 🔧 FIX: Sidebar toggle button - hide the "keyboard_double_arrow_right" text */
     button[data-testid="baseButton-header"] span {
         display: none !important;
@@ -199,10 +245,10 @@ st.markdown("""
         .sentiment-positive-bar, .sentiment-negative-bar, .sentiment-neutral-bar {
             font-size: 12px;
         }
+        .price-grid {
+            grid-template-columns: 1fr;
+        }
     }
-    
-    /* Remove the problematic small bar text hiding - we'll handle this programmatically */
-    /* No more width-based text hiding rules */
 </style>
 """, unsafe_allow_html=True)
 
@@ -261,7 +307,7 @@ def capture_analysis_output(token_symbol):
         return None, error_msg
 
 def create_enhanced_sentiment_bar_chart(sentiment_summary):
-    """🆕 Create an enhanced proportional sentiment bar chart with smart text display"""
+    """🆕 Create an enhanced proportional sentiment bar chart with smart text display (NO text summary below)"""
     total = sum(sentiment_summary.values())
     if total == 0:
         return ""
@@ -287,7 +333,7 @@ def create_enhanced_sentiment_bar_chart(sentiment_summary):
     neg_text = get_bar_text("❌", "负面", neg_count, neg_pct)
     neu_text = get_bar_text("⚪", "中性", neu_count, neu_pct)
     
-    # Create the bar chart
+    # Create ONLY the bar chart (no summary text below)
     bar_html = f"""
     <div class="sentiment-bar">
         <div class="sentiment-positive-bar" style="width: {pos_pct}%;">
@@ -302,19 +348,76 @@ def create_enhanced_sentiment_bar_chart(sentiment_summary):
     </div>
     """
     
-    # Add summary text below for clarity
-    summary_parts = []
-    if pos_count > 0: summary_parts.append(f"✅ 正面: {pos_count} 条 ({pos_pct:.1f}%)")
-    if neg_count > 0: summary_parts.append(f"❌ 负面: {neg_count} 条 ({neg_pct:.1f}%)")
-    if neu_count > 0: summary_parts.append(f"⚪ 中性: {neu_count} 条 ({neu_pct:.1f}%)")
+    return bar_html  # Return ONLY the bar, no summary below
+
+def parse_and_display_price_data(output_text):
+    """Parse price data from raw output and display in a nice format"""
+    lines = output_text.split('\n')
     
-    summary_html = f"""
-    <div style="text-align: center; margin-top: 10px; font-size: 14px; color: #666; padding: 10px; background-color: #f8f9fa; border-radius: 8px;">
-        {" | ".join(summary_parts)}
-    </div>
-    """
+    # Look for the price data line
+    price_line = ""
+    for line in lines:
+        if '💰 站内数据总览:' in line:
+            price_line = line
+            break
     
-    return bar_html + summary_html
+    if not price_line:
+        return None
+    
+    # Extract price, change, and volume using string parsing
+    try:
+        # Example line: "💰 站内数据总览: 💵 当前价格: $206.457627 📈 24H变化: -6.00% 💧 24H交易量: $937,192"
+        parts = price_line.split('💰 站内数据总览:')[1] if '💰 站内数据总览:' in price_line else price_line
+        
+        current_price = ""
+        change_24h = ""
+        volume_24h = ""
+        
+        # Extract current price
+        if '💵 当前价格:' in parts:
+            price_part = parts.split('💵 当前价格:')[1].split('📈')[0].split('📉')[0].strip()
+            current_price = price_part
+        
+        # Extract 24h change
+        if '24H变化:' in parts:
+            change_part = parts.split('24H变化:')[1].split('💧')[0].strip()
+            change_24h = change_part
+        
+        # Extract 24h volume
+        if '💧 24H交易量:' in parts:
+            volume_part = parts.split('💧 24H交易量:')[1].strip()
+            volume_24h = volume_part
+        
+        # Determine if change is positive or negative
+        change_class = "price-positive" if change_24h.startswith('+') or (change_24h and not change_24h.startswith('-')) else "price-negative"
+        change_icon = "📈" if change_class == "price-positive" else "📉"
+        
+        # Create the HTML display
+        price_html = f"""
+        <div class="price-container">
+            <h4 style="margin: 0 0 15px 0; text-align: center;">💰 价格数据总览</h4>
+            <div class="price-grid">
+                <div class="price-item">
+                    <div class="price-label">💵 当前价格</div>
+                    <div class="price-value">{current_price}</div>
+                </div>
+                <div class="price-item">
+                    <div class="price-label">{change_icon} 24小时变化</div>
+                    <div class="price-value {change_class}">{change_24h}</div>
+                </div>
+                <div class="price-item">
+                    <div class="price-label">💧 24小时交易量</div>
+                    <div class="price-value">{volume_24h}</div>
+                </div>
+            </div>
+        </div>
+        """
+        
+        return price_html
+        
+    except Exception as e:
+        # Fallback: just show the original line
+        return f'<div class="price-container"><h4>💰 价格数据总览</h4><p>{price_line}</p></div>'
 
 def parse_table_from_output(output_text, table_title):
     """🆕 Parse table data directly from raw output text"""
@@ -354,7 +457,7 @@ def parse_table_from_output(output_text, table_title):
     return headers, table_data
 
 def display_analysis_results(analysis_result, output_text):
-    """Display the analysis results in a structured format"""
+    """Display the analysis results in a structured format with enhanced price data"""
     if not analysis_result:
         st.error("分析失败或没有有效数据")
         if output_text:
@@ -372,29 +475,17 @@ def display_analysis_results(analysis_result, output_text):
         st.markdown(f"## {header_line}")
         st.info(tweet_count_line)
     
-    # Display price data
-    price_section_started = False
-    price_info = []
-    for line in lines:
-        if '💰 站内数据总览:' in line:
-            price_section_started = True
-            continue
-        elif price_section_started and line.strip().startswith('   '):
-            price_info.append(line.strip())
-        elif price_section_started and not line.strip().startswith('   ') and line.strip():
-            break
+    # 🆕 Display enhanced price data
+    price_html = parse_and_display_price_data(output_text)
+    if price_html:
+        st.markdown(price_html, unsafe_allow_html=True)
     
-    if price_info:
-        st.markdown("### 💰 价格数据")
-        for info in price_info:
-            st.text(info)
-    
-    # 🆕 Display enhanced sentiment distribution (only bar chart)
+    # Display enhanced sentiment distribution (ONLY bar chart, no text summary)
     sentiment_summary = analysis_result.get('sentiment_summary', {})
     if sentiment_summary:
         st.markdown("### 🎭 情绪分布")
         
-        # Only show the enhanced bar chart with detailed text inside
+        # Show ONLY the enhanced bar chart (no text summary below)
         enhanced_bar_chart_html = create_enhanced_sentiment_bar_chart(sentiment_summary)
         st.markdown(enhanced_bar_chart_html, unsafe_allow_html=True)
     
