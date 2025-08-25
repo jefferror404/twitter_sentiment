@@ -307,153 +307,105 @@ def capture_analysis_output(token_symbol):
         return None, error_msg
 
 def parse_and_display_price_data(output_text):
-    """Parse price data from raw output and display in a nice format"""
+    """Parse price data from raw output and display in a nice format - multi-line indented format"""
     lines = output_text.split('\n')
     
-    # Look for the price data in the actual format
-    for line in lines:
-        # Look for the line containing price information
-        # Format: "💰 站内数据总览: 💵 当前价格: $190.668325 📈 24H变化: -5.01% 💧 24H交易量: $512,345"
-        if '💰 站内数据总览:' in line and ('💵 当前价格:' in line or '未获取到有效数据' in line):
-            # Check if data is available
-            if '未获取到有效数据' in line:
-                return f"""
-                <div class="price-container">
-                    <h4 style="margin: 0 0 15px 0; text-align: center;">💰 价格数据总览</h4>
-                    <div style="text-align: center; padding: 20px;">
-                        <p style="font-size: 16px; opacity: 0.8; margin: 0;">📊 暂无价格数据</p>
-                        <p style="font-size: 14px; opacity: 0.6; margin: 5px 0 0 0;">当前代币可能未在主要交易所上市</p>
-                    </div>
-                </div>
-                """
-            
-            # Extract price data from the line
-            try:
-                # Extract current price
-                current_price = "N/A"
-                if '💵 当前价格:' in line:
-                    price_start = line.find('💵 当前价格:') + len('💵 当前价格:')
-                    price_end = line.find('📈', price_start)
-                    if price_end == -1:
-                        price_end = line.find('📉', price_start)
-                    if price_end == -1:
-                        price_end = line.find('💧', price_start)
-                    if price_end != -1:
-                        current_price = line[price_start:price_end].strip()
-                
-                # Extract 24h change
-                change_24h = "N/A"
-                change_icon = "📉"
-                if '24H变化:' in line:
-                    change_start = line.find('24H变化:') + len('24H变化:')
-                    change_end = line.find('💧', change_start)
-                    if change_end != -1:
-                        change_24h = line[change_start:change_end].strip()
-                        # Determine icon based on change
-                        if change_24h.startswith('-'):
-                            change_icon = "📉"
-                        else:
-                            change_icon = "📈"
-                
-                # Extract volume
-                volume_24h = "N/A"
-                if '💧 24H交易量:' in line:
-                    volume_start = line.find('💧 24H交易量:') + len('💧 24H交易量:')
-                    # Find the end of volume (next emoji or end of line)
-                    volume_end = line.find('🎭', volume_start)
-                    if volume_end == -1:
-                        volume_end = len(line)
-                    volume_24h = line[volume_start:volume_end].strip()
-                
-                # Determine change class
-                change_class = "price-negative" if change_24h.startswith('-') else "price-positive"
-                
-                # Create the HTML display
-                price_html = f"""
-                <div class="price-container">
-                    <h4 style="margin: 0 0 15px 0; text-align: center;">💰 价格数据总览</h4>
-                    <div class="price-grid">
-                        <div class="price-item">
-                            <div class="price-label">💵 当前价格</div>
-                            <div class="price-value">{current_price}</div>
-                        </div>
-                        <div class="price-item">
-                            <div class="price-label">{change_icon} 24小时变化</div>
-                            <div class="price-value {change_class}">{change_24h}</div>
-                        </div>
-                        <div class="price-item">
-                            <div class="price-label">💧 24小时交易量</div>
-                            <div class="price-value">{volume_24h}</div>
-                        </div>
-                    </div>
-                </div>
-                """
-                
-                return price_html
-                
-            except Exception as e:
-                print(f"Error parsing price data: {e}")
-                # Fallback: show the raw line
-                return f"""
-                <div class="price-container">
-                    <h4 style="margin: 0 0 15px 0; text-align: center;">💰 价格数据总览</h4>
-                    <div style="text-align: center; padding: 20px;">
-                        <p style="font-size: 14px; opacity: 0.8;">{line}</p>
-                    </div>
-                </div>
-                """
+    # Look for price data in multi-line format
+    price_data = {}
+    price_section_started = False
     
-    return None
+    for line in lines:
+        if '💰 站内数据总览:' in line:
+            price_section_started = True
+            continue
+        elif price_section_started and line.strip().startswith('💵 当前价格:'):
+            # Extract current price from "   💵 当前价格: $190.104194"
+            current_price = line.split('💵 当前价格:')[1].strip()
+            price_data['current_price'] = current_price
+        elif price_section_started and ('📈 24H变化:' in line or '📉 24H变化:' in line):
+            # Extract 24h change from "   📈 24H变化: -4.79%"
+            if '📈 24H变化:' in line:
+                change_24h = line.split('📈 24H变化:')[1].strip()
+                price_data['change_24h'] = change_24h
+                price_data['change_icon'] = '📈'
+            elif '📉 24H变化:' in line:
+                change_24h = line.split('📉 24H变化:')[1].strip()
+                price_data['change_24h'] = change_24h
+                price_data['change_icon'] = '📉'
+        elif price_section_started and line.strip().startswith('💧 24H交易量:'):
+            # Extract volume from "   💧 24H交易量: $515,254"
+            volume_24h = line.split('💧 24H交易量:')[1].strip()
+            price_data['volume_24h'] = volume_24h
+        elif price_section_started and line.strip() and not line.strip().startswith('   '):
+            # End of price section
+            break
+    
+    if not price_data:
+        return None
+    
+    # Get values with defaults
+    current_price = price_data.get('current_price', 'N/A')
+    change_24h = price_data.get('change_24h', 'N/A')
+    volume_24h = price_data.get('volume_24h', 'N/A')
+    change_icon = price_data.get('change_icon', '📉')
+    
+    # Determine change class
+    change_class = "price-negative" if change_24h.startswith('-') else "price-positive"
+    
+    # Create the HTML display
+    price_html = f"""
+    <div class="price-container">
+        <h4 style="margin: 0 0 15px 0; text-align: center;">💰 价格数据总览</h4>
+        <div class="price-grid">
+            <div class="price-item">
+                <div class="price-label">💵 当前价格</div>
+                <div class="price-value">{current_price}</div>
+            </div>
+            <div class="price-item">
+                <div class="price-label">{change_icon} 24小时变化</div>
+                <div class="price-value {change_class}">{change_24h}</div>
+            </div>
+            <div class="price-item">
+                <div class="price-label">💧 24小时交易量</div>
+                <div class="price-value">{volume_24h}</div>
+            </div>
+        </div>
+    </div>
+    """
+    
+    return price_html
 
 def create_enhanced_sentiment_bar_chart_from_output(output_text):
-    """🆕 Create sentiment bar chart directly from raw output text with lower threshold"""
-    # Parse sentiment data from output text
-    sentiment_data = {}
-    
+    """🆕 Create sentiment bar chart directly from raw output text - multi-line indented format"""
     lines = output_text.split('\n')
+    
+    sentiment_data = {}
+    sentiment_section_started = False
+    
     for line in lines:
-        # Look for the line containing sentiment distribution
-        # Format: "🎭 情绪分布: ✅ 正面: 26 条 (72.2%) ❌ 负面: 7 条 (19.4%) ⚪ 中性: 3 条 (8.3%)"
         if '🎭 情绪分布:' in line:
-            try:
-                # Extract positive sentiment
-                if '✅ 正面:' in line:
-                    pos_start = line.find('✅ 正面:') + len('✅ 正面:')
-                    pos_end = line.find('❌ 负面:', pos_start)
-                    if pos_end != -1:
-                        pos_text = line[pos_start:pos_end].strip()
-                        # Extract number from "26 条 (72.2%)"
-                        pos_count = int(pos_text.split('条')[0].strip())
-                        sentiment_data['POSITIVE'] = pos_count
-                
-                # Extract negative sentiment
-                if '❌ 负面:' in line:
-                    neg_start = line.find('❌ 负面:') + len('❌ 负面:')
-                    neg_end = line.find('⚪ 中性:', neg_start)
-                    if neg_end != -1:
-                        neg_text = line[neg_start:neg_end].strip()
-                        neg_count = int(neg_text.split('条')[0].strip())
-                        sentiment_data['NEGATIVE'] = neg_count
-                
-                # Extract neutral sentiment
-                if '⚪ 中性:' in line:
-                    neu_start = line.find('⚪ 中性:') + len('⚪ 中性:')
-                    # Find end of neutral part (next emoji or end of relevant part)
-                    neu_end = line.find('🤖', neu_start)
-                    if neu_end == -1:
-                        neu_end = len(line)
-                    neu_text = line[neu_start:neu_end].strip()
-                    neu_count = int(neu_text.split('条')[0].strip())
-                    sentiment_data['NEUTRAL'] = neu_count
-                
-                break
-                
-            except Exception as e:
-                print(f"Error parsing sentiment data: {e}")
-                continue
+            sentiment_section_started = True
+            continue
+        elif sentiment_section_started and line.strip().startswith('✅ 正面:'):
+            # Extract from "   ✅ 正面: 24 条 (63.2%)"
+            pos_text = line.split('✅ 正面:')[1].strip()
+            pos_count = int(pos_text.split('条')[0].strip())
+            sentiment_data['POSITIVE'] = pos_count
+        elif sentiment_section_started and line.strip().startswith('❌ 负面:'):
+            # Extract from "   ❌ 负面: 7 条 (18.4%)"
+            neg_text = line.split('❌ 负面:')[1].strip()
+            neg_count = int(neg_text.split('条')[0].strip())
+            sentiment_data['NEGATIVE'] = neg_count
+        elif sentiment_section_started and line.strip().startswith('⚪ 中性:'):
+            # Extract from "   ⚪ 中性: 7 条 (18.4%)"
+            neu_text = line.split('⚪ 中性:')[1].strip()
+            neu_count = int(neu_text.split('条')[0].strip())
+            sentiment_data['NEUTRAL'] = neu_count
+        elif sentiment_section_started and line.strip() and not line.strip().startswith('   '):
+            # End of sentiment section
+            break
     
     if not sentiment_data:
-        print(f"No sentiment data found in output")
         return ""
     
     total = sum(sentiment_data.values())
@@ -497,20 +449,6 @@ def create_enhanced_sentiment_bar_chart_from_output(output_text):
     """
     
     return bar_html
-
-def debug_parsing(output_text):
-    """Debug function to help identify parsing issues"""
-    lines = output_text.split('\n')
-    
-    print("=== DEBUG: Looking for price and sentiment data ===")
-    
-    for i, line in enumerate(lines):
-        if '💰 站内数据总览:' in line:
-            print(f"Found price line {i}: {line}")
-        if '🎭 情绪分布:' in line:
-            print(f"Found sentiment line {i}: {line}")
-    
-    print("=== End Debug ===")
 
 def parse_table_from_output(output_text, table_title):
     """🆕 Parse table data directly from raw output text"""
@@ -557,9 +495,6 @@ def display_analysis_results(analysis_result, output_text):
             st.text(output_text)
         return
     
-    # Debug: Print to console to help identify issues
-    debug_parsing(output_text)
-    
     # Parse the output text to extract key information
     lines = output_text.split('\n')
     
@@ -571,24 +506,27 @@ def display_analysis_results(analysis_result, output_text):
         st.markdown(f"## {header_line}")
         st.info(tweet_count_line)
     
-    # 🆕 Display enhanced price data (fixed)
+    # 🆕 Display enhanced price data (fixed for multi-line indented format)
     price_html = parse_and_display_price_data(output_text)
     if price_html:
         st.markdown(price_html, unsafe_allow_html=True)
     else:
         st.warning("⚠️ 未找到价格数据格式")
     
-    # 🆕 Display sentiment distribution using data from raw output (fixed)
+    # 🆕 Display sentiment distribution using data from raw output (fixed for multi-line indented format)
     st.markdown("### 🎭 情绪分布")
     
-    # Use the new function that extracts from raw output
+    # Use the new function that extracts from multi-line indented output
     enhanced_bar_chart_html = create_enhanced_sentiment_bar_chart_from_output(output_text)
     if enhanced_bar_chart_html:
         st.markdown(enhanced_bar_chart_html, unsafe_allow_html=True)
     else:
         st.warning("⚠️ 未找到情感分析数据格式")
-        # Show what we're looking for
-        st.text("期望格式: 🎭 情绪分布: ✅ 正面: X 条 (Y%) ❌ 负面: X 条 (Y%) ⚪ 中性: X 条 (Y%)")
+        st.text("期望格式:")
+        st.text("🎭 情绪分布:")
+        st.text("   ✅ 正面: X 条 (Y%)")
+        st.text("   ❌ 负面: X 条 (Y%)")
+        st.text("   ⚪ 中性: X 条 (Y%)")
     
     # Display AI summary
     ai_summary_started = False
