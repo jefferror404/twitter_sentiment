@@ -306,72 +306,42 @@ def capture_analysis_output(token_symbol):
         error_msg = f"💥 分析过程中出现错误: {str(e)}\n{traceback.format_exc()}"
         return None, error_msg
 
-def create_enhanced_sentiment_bar_chart(sentiment_summary):
-    """🆕 Create an enhanced proportional sentiment bar chart with smart text display (NO text summary below)"""
-    total = sum(sentiment_summary.values())
-    if total == 0:
-        return ""
-    
-    pos_count = sentiment_summary.get('POSITIVE', 0)
-    neg_count = sentiment_summary.get('NEGATIVE', 0)
-    neu_count = sentiment_summary.get('NEUTRAL', 0)
-    
-    pos_pct = (pos_count / total * 100)
-    neg_pct = (neg_count / total * 100)
-    neu_pct = (neu_count / total * 100)
-    
-    # Smart text display - only show full text if percentage is above 8%
-    def get_bar_text(emoji, label, count, pct, min_threshold=8):
-        if pct >= min_threshold:
-            return f"{emoji} {label}: {count} 条 ({pct:.1f}%)"
-        elif pct > 0:
-            return f"{emoji}"  # Just emoji for small bars
-        else:
-            return ""
-    
-    pos_text = get_bar_text("✅", "正面", pos_count, pos_pct)
-    neg_text = get_bar_text("❌", "负面", neg_count, neg_pct)
-    neu_text = get_bar_text("⚪", "中性", neu_count, neu_pct)
-    
-    # Create ONLY the bar chart (no summary text below)
-    bar_html = f"""
-    <div class="sentiment-bar">
-        <div class="sentiment-positive-bar" style="width: {pos_pct}%;">
-            {pos_text}
-        </div>
-        <div class="sentiment-negative-bar" style="width: {neg_pct}%;">
-            {neg_text}
-        </div>
-        <div class="sentiment-neutral-bar" style="width: {neu_pct}%;">
-            {neu_text}
-        </div>
-    </div>
-    """
-    
-    return bar_html  # Return ONLY the bar, no summary below
-
 def parse_and_display_price_data(output_text):
     """Parse price data from raw output and display in a nice format"""
     lines = output_text.split('\n')
     
-    # Look for the price data line
+    # Look for the price data line - updated to handle the actual format
     price_line = ""
     for line in lines:
-        if '💰 站内数据总览:' in line:
+        if '💰 站内数据总览:' in line or '💰 价格数据:' in line:
             price_line = line
             break
     
     if not price_line:
         return None
     
+    # Check if data is available
+    if '未获取到有效数据' in price_line:
+        # Show a nice "no data" message
+        no_data_html = f"""
+        <div class="price-container">
+            <h4 style="margin: 0 0 15px 0; text-align: center;">💰 价格数据总览</h4>
+            <div style="text-align: center; padding: 20px;">
+                <p style="font-size: 16px; opacity: 0.8; margin: 0;">📊 暂无价格数据</p>
+                <p style="font-size: 14px; opacity: 0.6; margin: 5px 0 0 0;">当前代币可能未在主要交易所上市</p>
+            </div>
+        </div>
+        """
+        return no_data_html
+    
     # Extract price, change, and volume using string parsing
     try:
-        # Example line: "💰 站内数据总览: 💵 当前价格: $206.457627 📈 24H变化: -6.00% 💧 24H交易量: $937,192"
+        # Handle the expected format: "💰 站内数据总览: 💵 当前价格: $206.457627 📈 24H变化: -6.00% 💧 24H交易量: $937,192"
         parts = price_line.split('💰 站内数据总览:')[1] if '💰 站内数据总览:' in price_line else price_line
         
-        current_price = ""
-        change_24h = ""
-        volume_24h = ""
+        current_price = "N/A"
+        change_24h = "N/A"
+        volume_24h = "N/A"
         
         # Extract current price
         if '💵 当前价格:' in parts:
@@ -388,8 +358,20 @@ def parse_and_display_price_data(output_text):
             volume_part = parts.split('💧 24H交易量:')[1].strip()
             volume_24h = volume_part
         
+        # If all data is N/A, show no data message
+        if current_price == "N/A" and change_24h == "N/A" and volume_24h == "N/A":
+            return f"""
+            <div class="price-container">
+                <h4 style="margin: 0 0 15px 0; text-align: center;">💰 价格数据总览</h4>
+                <div style="text-align: center; padding: 20px;">
+                    <p style="font-size: 16px; opacity: 0.8; margin: 0;">📊 暂无价格数据</p>
+                    <p style="font-size: 14px; opacity: 0.6; margin: 5px 0 0 0;">当前代币可能未在主要交易所上市</p>
+                </div>
+            </div>
+            """
+        
         # Determine if change is positive or negative
-        change_class = "price-positive" if change_24h.startswith('+') or (change_24h and not change_24h.startswith('-')) else "price-negative"
+        change_class = "price-positive" if change_24h.startswith('+') or (change_24h != "N/A" and not change_24h.startswith('-')) else "price-negative"
         change_icon = "📈" if change_class == "price-positive" else "📉"
         
         # Create the HTML display
@@ -416,8 +398,92 @@ def parse_and_display_price_data(output_text):
         return price_html
         
     except Exception as e:
-        # Fallback: just show the original line
-        return f'<div class="price-container"><h4>💰 价格数据总览</h4><p>{price_line}</p></div>'
+        # Fallback: show no data message
+        return f"""
+        <div class="price-container">
+            <h4 style="margin: 0 0 15px 0; text-align: center;">💰 价格数据总览</h4>
+            <div style="text-align: center; padding: 20px;">
+                <p style="font-size: 16px; opacity: 0.8; margin: 0;">📊 暂无价格数据</p>
+            </div>
+        </div>
+        """
+
+def create_enhanced_sentiment_bar_chart_from_output(output_text):
+    """🆕 Create sentiment bar chart directly from raw output text with lower threshold"""
+    # Parse sentiment data from output text
+    sentiment_data = {}
+    
+    lines = output_text.split('\n')
+    for line in lines:
+        if '🎭 情绪分布:' in line:
+            # Found the sentiment line, extract data
+            # Example: "🎭 情绪分布: ✅ 正面: 24 条 (77.4%) ❌ 负面: 5 条 (16.1%) ⚪ 中性: 2 条 (6.5%)"
+            sentiment_part = line.split('🎭 情绪分布:')[1].strip()
+            
+            # Extract positive
+            if '✅ 正面:' in sentiment_part:
+                pos_match = sentiment_part.split('✅ 正面:')[1].split('❌')[0].strip()
+                pos_count = int(pos_match.split('条')[0].strip())
+                sentiment_data['POSITIVE'] = pos_count
+            
+            # Extract negative  
+            if '❌ 负面:' in sentiment_part:
+                neg_match = sentiment_part.split('❌ 负面:')[1].split('⚪')[0].strip()
+                neg_count = int(neg_match.split('条')[0].strip())
+                sentiment_data['NEGATIVE'] = neg_count
+            
+            # Extract neutral
+            if '⚪ 中性:' in sentiment_part:
+                neu_match = sentiment_part.split('⚪ 中性:')[1].strip()
+                neu_count = int(neu_match.split('条')[0].strip())
+                sentiment_data['NEUTRAL'] = neu_count
+            
+            break
+    
+    if not sentiment_data:
+        return ""
+    
+    total = sum(sentiment_data.values())
+    if total == 0:
+        return ""
+    
+    pos_count = sentiment_data.get('POSITIVE', 0)
+    neg_count = sentiment_data.get('NEGATIVE', 0)
+    neu_count = sentiment_data.get('NEUTRAL', 0)
+    
+    pos_pct = (pos_count / total * 100)
+    neg_pct = (neg_count / total * 100)
+    neu_pct = (neu_count / total * 100)
+    
+    # Lower threshold for text display (5% instead of 8%)
+    def get_bar_text(emoji, label, count, pct, min_threshold=5):
+        if pct >= min_threshold:
+            return f"{emoji} {label}: {count} 条 ({pct:.1f}%)"
+        elif pct > 0:
+            return f"{emoji}"  # Just emoji for very small bars
+        else:
+            return ""
+    
+    pos_text = get_bar_text("✅", "正面", pos_count, pos_pct)
+    neg_text = get_bar_text("❌", "负面", neg_count, neg_pct)
+    neu_text = get_bar_text("⚪", "中性", neu_count, neu_pct)
+    
+    # Create the bar chart
+    bar_html = f"""
+    <div class="sentiment-bar">
+        <div class="sentiment-positive-bar" style="width: {pos_pct}%;">
+            {pos_text}
+        </div>
+        <div class="sentiment-negative-bar" style="width: {neg_pct}%;">
+            {neg_text}
+        </div>
+        <div class="sentiment-neutral-bar" style="width: {neu_pct}%;">
+            {neu_text}
+        </div>
+    </div>
+    """
+    
+    return bar_html
 
 def parse_table_from_output(output_text, table_title):
     """🆕 Parse table data directly from raw output text"""
@@ -475,19 +541,20 @@ def display_analysis_results(analysis_result, output_text):
         st.markdown(f"## {header_line}")
         st.info(tweet_count_line)
     
-    # 🆕 Display enhanced price data
+    # 🆕 Display enhanced price data (fixed)
     price_html = parse_and_display_price_data(output_text)
     if price_html:
         st.markdown(price_html, unsafe_allow_html=True)
     
-    # Display enhanced sentiment distribution (ONLY bar chart, no text summary)
-    sentiment_summary = analysis_result.get('sentiment_summary', {})
-    if sentiment_summary:
-        st.markdown("### 🎭 情绪分布")
-        
-        # Show ONLY the enhanced bar chart (no text summary below)
-        enhanced_bar_chart_html = create_enhanced_sentiment_bar_chart(sentiment_summary)
+    # 🆕 Display sentiment distribution using data from raw output (fixed)
+    st.markdown("### 🎭 情绪分布")
+    
+    # Use the new function that extracts from raw output
+    enhanced_bar_chart_html = create_enhanced_sentiment_bar_chart_from_output(output_text)
+    if enhanced_bar_chart_html:
         st.markdown(enhanced_bar_chart_html, unsafe_allow_html=True)
+    else:
+        st.info("暂无情感分析数据")
     
     # Display AI summary
     ai_summary_started = False
@@ -532,7 +599,7 @@ def display_analysis_results(analysis_result, output_text):
             elif line and any(char.isdigit() for char in line[:5]):
                 st.text(line)
     
-    # 🆕 Parse and display viral tweets directly from raw output
+    # Parse and display viral tweets directly from raw output
     st.markdown("### 🔥 病毒式传播推文")
     viral_headers, viral_data = parse_table_from_output(output_text, "🔥 病毒式传播推文")
     
@@ -541,7 +608,7 @@ def display_analysis_results(analysis_result, output_text):
         df_viral = pd.DataFrame(viral_data, columns=viral_headers if viral_headers else 
                                ['用户名', '传播力', '点赞', '转推', '回复', '情绪', '话题', '推文链接'])
         
-        # 🆕 Display with clickable links using st.dataframe with column configuration
+        # Display with clickable links using st.dataframe with column configuration
         st.dataframe(
             df_viral,
             use_container_width=True,
@@ -556,7 +623,7 @@ def display_analysis_results(analysis_result, output_text):
     else:
         st.info("暂无符合条件的病毒式传播推文")
     
-    # 🆕 Parse and display high influence tweets directly from raw output
+    # Parse and display high influence tweets directly from raw output
     st.markdown("### 👑 高影响力用户动态")
     influence_headers, influence_data = parse_table_from_output(output_text, "👑 高影响力用户动态")
     
@@ -565,7 +632,7 @@ def display_analysis_results(analysis_result, output_text):
         df_influence = pd.DataFrame(influence_data, columns=influence_headers if influence_headers else 
                                   ['用户名', '影响力', '粉丝数', '情绪', '传播力', '话题', '推文链接'])
         
-        # 🆕 Display with clickable links using st.dataframe with column configuration
+        # Display with clickable links using st.dataframe with column configuration
         st.dataframe(
             df_influence,
             use_container_width=True,
