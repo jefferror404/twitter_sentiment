@@ -355,7 +355,7 @@ def parse_and_display_price_data(output_text):
     # Create the HTML display
     price_html = f"""
     <div class="price-container">
-        <h4 style="margin: 0 0 15px 0; text-align: center;">💰 价格数据总览</h4>
+        <h4 style="margin: 0 0 15px 0; text-align: center;">💰站内价格数据总览</h4>
         <div class="price-grid">
             <div class="price-item">
                 <div class="price-label">💵 当前价格</div>
