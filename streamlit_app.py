@@ -64,57 +64,65 @@ st.markdown("""
         box-shadow: none !important;
     }
     
-    /* Enhanced sentiment bar styling */
-    .sentiment-bar {
-        height: 50px;
+    /* 🆕 NEW: Enhanced horizontal sentiment bars - stacked vertically */
+    .sentiment-bars-container {
+        margin: 20px 0;
+        background: #f8f9fa;
+        padding: 20px;
         border-radius: 12px;
-        overflow: hidden;
-        display: flex;
-        margin: 15px 0;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        border: 2px solid #e9ecef;
+        border: 1px solid #e9ecef;
     }
-    .sentiment-positive-bar {
+    
+    .sentiment-bar-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+        min-height: 40px;
+    }
+    
+    .sentiment-bar-row:last-child {
+        margin-bottom: 0;
+    }
+    
+    .sentiment-bar-single {
+        height: 35px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 0 12px;
+        margin-right: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        color: white;
+        font-weight: bold;
+        font-size: 14px;
+        min-width: 50px;
+        flex-shrink: 0;
+    }
+    
+    .sentiment-positive-single {
         background-color: #43946c;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 14px;
-        padding: 0 8px;
-        text-align: center;
-        min-width: 0;
-        white-space: nowrap;
-        overflow: hidden;
     }
-    .sentiment-negative-bar {
+    
+    .sentiment-negative-single {
         background-color: #dc3545;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 14px;
-        padding: 0 8px;
-        text-align: center;
-        min-width: 0;
-        white-space: nowrap;
-        overflow: hidden;
     }
-    .sentiment-neutral-bar {
+    
+    .sentiment-neutral-single {
         background-color: #6c757d;
+    }
+    
+    .sentiment-bar-text {
+        font-size: 16px;
+        font-weight: 500;
+        color: #333;
         display: flex;
         align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 14px;
-        padding: 0 8px;
-        text-align: center;
-        min-width: 0;
-        white-space: nowrap;
-        overflow: hidden;
+    }
+    
+    .sentiment-emoji {
+        font-size: 18px;
+        margin-right: 8px;
     }
     
     /* Price data styling */
@@ -161,6 +169,46 @@ st.markdown("""
     
     .price-negative {
         color: #f87171 !important;
+    }
+    
+    /* 🆕 NEW: AI Summary consistent text formatting */
+    .ai-summary-container {
+        background: #ffffff;
+        border: 1px solid #e1e8ed;
+        border-radius: 12px;
+        padding: 20px;
+        margin: 15px 0;
+    }
+    
+    .ai-summary-container p,
+    .ai-summary-container div {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+        font-size: 14px !important;
+        line-height: 1.6 !important;
+        color: #333333 !important;
+        margin: 8px 0 !important;
+    }
+    
+    .ai-summary-container strong {
+        font-weight: 600 !important;
+        color: #1f2937 !important;
+    }
+    
+    .ai-summary-title {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        color: #1f2937 !important;
+        margin-bottom: 12px !important;
+    }
+    
+    /* Force consistent text styling for all content within expander */
+    .streamlit-expanderContent div,
+    .streamlit-expanderContent p {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
+        font-size: 14px !important;
+        line-height: 1.6 !important;
+        color: #333333 !important;
     }
     
     /* 🔧 FIX: Sidebar toggle button - hide the "keyboard_double_arrow_right" text */
@@ -242,11 +290,23 @@ st.markdown("""
     
     /* Responsive design */
     @media (max-width: 768px) {
-        .sentiment-positive-bar, .sentiment-negative-bar, .sentiment-neutral-bar {
+        .sentiment-bar-single {
             font-size: 12px;
+            padding: 0 8px;
+        }
+        .sentiment-bar-text {
+            font-size: 14px;
         }
         .price-grid {
             grid-template-columns: 1fr;
+        }
+        .sentiment-bar-row {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .sentiment-bar-single {
+            margin-right: 0;
+            margin-bottom: 8px;
         }
     }
 </style>
@@ -375,8 +435,8 @@ def parse_and_display_price_data(output_text):
     
     return price_html
 
-def create_enhanced_sentiment_bar_chart_from_output(output_text):
-    """🆕 Create sentiment bar chart directly from raw output text - multi-line indented format"""
+def create_vertical_sentiment_bars_from_output(output_text):
+    """🆕 Create vertical stacked sentiment bars directly from raw output text"""
     lines = output_text.split('\n')
     
     sentiment_data = {}
@@ -390,17 +450,29 @@ def create_enhanced_sentiment_bar_chart_from_output(output_text):
             # Extract from "   ✅ 正面: 24 条 (63.2%)"
             pos_text = line.split('✅ 正面:')[1].strip()
             pos_count = int(pos_text.split('条')[0].strip())
-            sentiment_data['POSITIVE'] = pos_count
+            pos_pct_text = pos_text.split('(')[1].split(')')[0]
+            sentiment_data['POSITIVE'] = {
+                'count': pos_count,
+                'percentage': pos_pct_text
+            }
         elif sentiment_section_started and line.strip().startswith('❌ 负面:'):
             # Extract from "   ❌ 负面: 7 条 (18.4%)"
             neg_text = line.split('❌ 负面:')[1].strip()
             neg_count = int(neg_text.split('条')[0].strip())
-            sentiment_data['NEGATIVE'] = neg_count
+            neg_pct_text = neg_text.split('(')[1].split(')')[0]
+            sentiment_data['NEGATIVE'] = {
+                'count': neg_count,
+                'percentage': neg_pct_text
+            }
         elif sentiment_section_started and line.strip().startswith('⚪ 中性:'):
             # Extract from "   ⚪ 中性: 7 条 (18.4%)"
             neu_text = line.split('⚪ 中性:')[1].strip()
             neu_count = int(neu_text.split('条')[0].strip())
-            sentiment_data['NEUTRAL'] = neu_count
+            neu_pct_text = neu_text.split('(')[1].split(')')[0]
+            sentiment_data['NEUTRAL'] = {
+                'count': neu_count,
+                'percentage': neu_pct_text
+            }
         elif sentiment_section_started and line.strip() and not line.strip().startswith('   '):
             # End of sentiment section
             break
@@ -408,47 +480,57 @@ def create_enhanced_sentiment_bar_chart_from_output(output_text):
     if not sentiment_data:
         return ""
     
-    total = sum(sentiment_data.values())
+    # Get data with defaults
+    pos_data = sentiment_data.get('POSITIVE', {'count': 0, 'percentage': '0%'})
+    neg_data = sentiment_data.get('NEGATIVE', {'count': 0, 'percentage': '0%'})
+    neu_data = sentiment_data.get('NEUTRAL', {'count': 0, 'percentage': '0%'})
+    
+    total = pos_data['count'] + neg_data['count'] + neu_data['count']
     if total == 0:
         return ""
     
-    pos_count = sentiment_data.get('POSITIVE', 0)
-    neg_count = sentiment_data.get('NEGATIVE', 0)
-    neu_count = sentiment_data.get('NEUTRAL', 0)
+    # Calculate bar widths based on percentage (max width 300px)
+    max_width = 300
+    pos_width = max(50, (pos_data['count'] / total) * max_width) if pos_data['count'] > 0 else 50
+    neg_width = max(50, (neg_data['count'] / total) * max_width) if neg_data['count'] > 0 else 50
+    neu_width = max(50, (neu_data['count'] / total) * max_width) if neu_data['count'] > 0 else 50
     
-    pos_pct = (pos_count / total * 100)
-    neg_pct = (neg_count / total * 100)
-    neu_pct = (neu_count / total * 100)
-    
-    # Lower threshold for text display (4% instead of 5%)
-    def get_bar_text(emoji, label, count, pct, min_threshold=4):
-        if pct >= min_threshold:
-            return f"{emoji} {label}: {count} 条 ({pct:.1f}%)"
-        elif pct > 0:
-            return f"{emoji}"  # Just emoji for very small bars
-        else:
-            return ""
-    
-    pos_text = get_bar_text("✅", "正面", pos_count, pos_pct)
-    neg_text = get_bar_text("❌", "负面", neg_count, neg_pct)
-    neu_text = get_bar_text("⚪", "中性", neu_count, neu_pct)
-    
-    # Create the bar chart
-    bar_html = f"""
-    <div class="sentiment-bar">
-        <div class="sentiment-positive-bar" style="width: {pos_pct}%;">
-            {pos_text}
+    # Create the vertical stacked bars HTML
+    bars_html = f"""
+    <div class="sentiment-bars-container">
+        <div class="sentiment-bar-row">
+            <div class="sentiment-bar-single sentiment-positive-single" style="width: {pos_width}px;">
+                ✅
+            </div>
+            <div class="sentiment-bar-text">
+                <span class="sentiment-emoji">✅</span>
+                <strong>正面:</strong> {pos_data['count']} 条 ({pos_data['percentage']})
+            </div>
         </div>
-        <div class="sentiment-negative-bar" style="width: {neg_pct}%;">
-            {neg_text}
+        
+        <div class="sentiment-bar-row">
+            <div class="sentiment-bar-single sentiment-negative-single" style="width: {neg_width}px;">
+                ❌
+            </div>
+            <div class="sentiment-bar-text">
+                <span class="sentiment-emoji">❌</span>
+                <strong>负面:</strong> {neg_data['count']} 条 ({neg_data['percentage']})
+            </div>
         </div>
-        <div class="sentiment-neutral-bar" style="width: {neu_pct}%;">
-            {neu_text}
+        
+        <div class="sentiment-bar-row">
+            <div class="sentiment-bar-single sentiment-neutral-single" style="width: {neu_width}px;">
+                ⚪
+            </div>
+            <div class="sentiment-bar-text">
+                <span class="sentiment-emoji">⚪</span>
+                <strong>中性:</strong> {neu_data['count']} 条 ({neu_data['percentage']})
+            </div>
         </div>
     </div>
     """
     
-    return bar_html
+    return bars_html
 
 def parse_table_from_output(output_text, table_title):
     """🆕 Parse table data directly from raw output text"""
@@ -487,6 +569,44 @@ def parse_table_from_output(output_text, table_title):
     
     return headers, table_data
 
+def display_ai_summary_section(lines):
+    """🆕 Display AI summary with consistent formatting"""
+    ai_summary_started = False
+    ai_summary_lines = []
+    
+    for line in lines:
+        if '🤖 AI 智能分析摘要:' in line:
+            ai_summary_started = True
+            continue
+        elif ai_summary_started and '======' in line:
+            continue
+        elif ai_summary_started and line.strip() and not line.startswith('📈'):
+            ai_summary_lines.append(line.strip())
+        elif ai_summary_started and line.startswith('📈'):
+            break
+    
+    if ai_summary_lines:
+        st.markdown("### 🤖 AI 智能分析摘要")
+        
+        with st.expander("查看详细分析", expanded=True):
+            # Create a container with consistent styling
+            summary_html = '<div class="ai-summary-container">'
+            
+            for line in ai_summary_lines:
+                if line.startswith('   ') and any(char.isdigit() for char in line[:5]):
+                    # Numbered points - make them bold
+                    clean_line = line.strip()
+                    summary_html += f'<p><strong>{clean_line}</strong></p>'
+                elif line.strip():
+                    # Regular text
+                    clean_line = line.strip()
+                    summary_html += f'<p>{clean_line}</p>'
+            
+            summary_html += '</div>'
+            
+            # Display using markdown with HTML
+            st.markdown(summary_html, unsafe_allow_html=True)
+
 def display_analysis_results(analysis_result, output_text):
     """Display the analysis results in a structured format with enhanced price data"""
     if not analysis_result:
@@ -513,13 +633,13 @@ def display_analysis_results(analysis_result, output_text):
     else:
         st.warning("⚠️ 未找到价格数据格式")
     
-    # 🆕 Display sentiment distribution using data from raw output (fixed for multi-line indented format)
+    # 🆕 Display sentiment distribution using NEW vertical bars
     st.markdown("### 🎭 情绪分布")
     
-    # Use the new function that extracts from multi-line indented output
-    enhanced_bar_chart_html = create_enhanced_sentiment_bar_chart_from_output(output_text)
-    if enhanced_bar_chart_html:
-        st.markdown(enhanced_bar_chart_html, unsafe_allow_html=True)
+    # Use the new vertical sentiment bars function
+    vertical_bars_html = create_vertical_sentiment_bars_from_output(output_text)
+    if vertical_bars_html:
+        st.markdown(vertical_bars_html, unsafe_allow_html=True)
     else:
         st.warning("⚠️ 未找到情感分析数据格式")
         st.text("期望格式:")
@@ -528,28 +648,8 @@ def display_analysis_results(analysis_result, output_text):
         st.text("   ❌ 负面: X 条 (Y%)")
         st.text("   ⚪ 中性: X 条 (Y%)")
     
-    # Display AI summary
-    ai_summary_started = False
-    ai_summary_lines = []
-    for line in lines:
-        if '🤖 AI 智能分析摘要:' in line:
-            ai_summary_started = True
-            continue
-        elif ai_summary_started and '======' in line:
-            continue
-        elif ai_summary_started and line.strip() and not line.startswith('📈'):
-            ai_summary_lines.append(line.strip())
-        elif ai_summary_started and line.startswith('📈'):
-            break
-    
-    if ai_summary_lines:
-        st.markdown("### 🤖 AI 智能分析摘要")
-        with st.expander("查看详细分析", expanded=True):
-            for line in ai_summary_lines:
-                if line.startswith('   ') and any(char.isdigit() for char in line[:5]):
-                    st.markdown(f"**{line.strip()}**")
-                elif line.strip():
-                    st.write(line.strip())
+    # 🆕 Display AI summary with consistent formatting
+    display_ai_summary_section(lines)
     
     # Display topic analysis
     topics_started = False
