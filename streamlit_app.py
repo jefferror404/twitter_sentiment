@@ -5,6 +5,7 @@ import pandas as pd
 from contextlib import redirect_stdout, redirect_stderr
 import traceback
 import os
+import re
 
 # Import your existing modules
 from api.twitter_api import TwitterAPI
@@ -162,9 +163,9 @@ st.markdown("""
         color: #f87171 !important;
     }
     
-    /* AI Summary consistent text formatting */
+    /* AI Summary - FIXED: Remove white background */
     .ai-summary-container {
-        background: #ffffff;
+        background: transparent !important;
         border: 1px solid #e1e8ed;
         border-radius: 12px;
         padding: 25px;
@@ -349,17 +350,11 @@ def parse_and_display_price_data(output_text):
     return price_html
 
 def create_vertical_sentiment_bars_from_output(output_text):
-    """Create vertical stacked sentiment bars - COMPLETELY FIXED VERSION"""
+    """Create vertical stacked sentiment bars - PRODUCTION VERSION (no debug prints)"""
     lines = output_text.split('\n')
     
     sentiment_data = {}
     sentiment_section_started = False
-    
-    # Debug: Print lines to see what we're working with
-    print("DEBUG: Looking for sentiment data in lines:")
-    for i, line in enumerate(lines):
-        if '🎭 情绪分布:' in line or '正面:' in line or '负面:' in line or '中性:' in line:
-            print(f"Line {i}: {line}")
     
     for line in lines:
         if '🎭 情绪分布:' in line:
@@ -367,7 +362,6 @@ def create_vertical_sentiment_bars_from_output(output_text):
             continue
         elif sentiment_section_started and '正面:' in line:
             try:
-                # Handle both formats: "✅ 正面: 24 条 (63.2%)" and "   ✅ 正面: 24 条 (63.2%)"
                 if '✅ 正面:' in line:
                     pos_text = line.split('✅ 正面:')[1].strip()
                 else:
@@ -379,9 +373,7 @@ def create_vertical_sentiment_bars_from_output(output_text):
                     'count': pos_count,
                     'percentage': pos_pct_text
                 }
-                print(f"DEBUG: Parsed positive: {sentiment_data['POSITIVE']}")
-            except Exception as e:
-                print(f"DEBUG: Error parsing positive sentiment: {e}")
+            except Exception:
                 sentiment_data['POSITIVE'] = {'count': 0, 'percentage': '0.0%'}
         elif sentiment_section_started and '负面:' in line:
             try:
@@ -396,9 +388,7 @@ def create_vertical_sentiment_bars_from_output(output_text):
                     'count': neg_count,
                     'percentage': neg_pct_text
                 }
-                print(f"DEBUG: Parsed negative: {sentiment_data['NEGATIVE']}")
-            except Exception as e:
-                print(f"DEBUG: Error parsing negative sentiment: {e}")
+            except Exception:
                 sentiment_data['NEGATIVE'] = {'count': 0, 'percentage': '0.0%'}
         elif sentiment_section_started and '中性:' in line:
             try:
@@ -413,17 +403,12 @@ def create_vertical_sentiment_bars_from_output(output_text):
                     'count': neu_count,
                     'percentage': neu_pct_text
                 }
-                print(f"DEBUG: Parsed neutral: {sentiment_data['NEUTRAL']}")
-            except Exception as e:
-                print(f"DEBUG: Error parsing neutral sentiment: {e}")
+            except Exception:
                 sentiment_data['NEUTRAL'] = {'count': 0, 'percentage': '0.0%'}
         elif sentiment_section_started and line.strip() and ('🤖' in line or '📈' in line):
             break
     
-    print(f"DEBUG: Final sentiment_data: {sentiment_data}")
-    
     if not sentiment_data:
-        print("DEBUG: No sentiment data found, returning empty string")
         return ""
     
     # Get data with defaults
@@ -433,7 +418,6 @@ def create_vertical_sentiment_bars_from_output(output_text):
     
     total = pos_data['count'] + neg_data['count'] + neu_data['count']
     if total == 0:
-        print("DEBUG: Total count is 0, returning empty string")
         return ""
     
     # Calculate bar widths (max 350px, min 80px for better visibility)
@@ -479,11 +463,10 @@ def create_vertical_sentiment_bars_from_output(output_text):
     </div>
     """
     
-    print(f"DEBUG: Generated bars_html successfully, length: {len(bars_html)}")
     return bars_html
 
-def parse_table_from_output(output_text, table_title):
-    """Parse table data directly from raw output text"""
+def parse_table_from_output_enhanced(output_text, table_title):
+    """Enhanced table parsing that handles the actual formatter output format"""
     lines = output_text.split('\n')
     table_data = []
     in_table = False
@@ -492,28 +475,75 @@ def parse_table_from_output(output_text, table_title):
     for i, line in enumerate(lines):
         if table_title in line:
             in_table = True
-            # Look for header line
-            for j in range(i+1, min(i+5, len(lines))):
-                if '|' in lines[j] and '用户名' in lines[j]:
-                    header_line = lines[j].strip()
-                    headers = [h.strip() for h in header_line.split('|')]
-                    break
             continue
         
-        if in_table and line.strip():
-            # Stop when we hit next section
-            if line.startswith('👑') or line.startswith('🔍') or line.startswith('💰') or line.startswith('==='):
+        if in_table:
+            # Stop conditions
+            if (line.startswith('👑') or line.startswith('🔍') or 
+                line.startswith('💰') or line.startswith('===') or
+                line.startswith('📈') or line.startswith('🤖') or
+                line.startswith('📋')):
                 break
             
-            # Skip separator lines
-            if '---' in line or '===' in line:
+            # Skip separators and info lines
+            if ('---' in line or '===' in line or 
+                '暂无符合条件' in line or not line.strip()):
                 continue
             
-            # Process data rows
-            if '|' in line and '@' in line and 'https://' in line:
-                row_data = [cell.strip() for cell in line.split('|')]
-                if len(row_data) >= 7:
+            # Look for actual data rows (they start with spaces and contain @)
+            if line.startswith('   ') and '@' in line and 'https://twitter.com' in line:
+                # Parse the line manually based on expected format
+                line_content = line.strip()
+                
+                # Find username
+                username_match = re.search(r'@(\w+)', line_content)
+                username = f"@{username_match.group(1)}" if username_match else ""
+                
+                # Find Twitter link
+                link_match = re.search(r'https://twitter\.com/[^\s]+', line_content)
+                twitter_link = link_match.group(0) if link_match else ""
+                
+                # Extract numeric values and sentiment
+                # Remove username and link from the line to get the middle parts
+                temp_line = line_content
+                if username:
+                    temp_line = temp_line.replace(username, '', 1)
+                if twitter_link:
+                    temp_line = temp_line.replace(twitter_link, '', 1)
+                
+                # Split remaining content and filter
+                parts = [p.strip() for p in temp_line.split() if p.strip()]
+                
+                # For viral tweets: [传播力, 点赞, 转推, 回复, 情绪, 话题]
+                # For influence: [影响力, 粉丝数, 情绪, 传播力, 话题]
+                
+                if table_title == "🔥 病毒式传播推文" and len(parts) >= 5:
+                    # Try to extract the values in order
+                    viral_power = parts[0] if parts[0].replace('.', '').replace(',', '').isdigit() else ""
+                    likes = parts[1] if len(parts) > 1 else ""
+                    retweets = parts[2] if len(parts) > 2 else ""
+                    replies = parts[3] if len(parts) > 3 else ""
+                    sentiment = parts[4] if len(parts) > 4 else ""
+                    topic = " ".join(parts[5:]) if len(parts) > 5 else ""
+                    
+                    row_data = [username, viral_power, likes, retweets, replies, sentiment, topic, twitter_link]
                     table_data.append(row_data)
+                
+                elif table_title == "👑 高影响力用户动态" and len(parts) >= 4:
+                    influence = parts[0] if parts[0].replace('.', '').replace(',', '').isdigit() else ""
+                    followers = parts[1] if len(parts) > 1 else ""
+                    sentiment = parts[2] if len(parts) > 2 else ""
+                    viral_power = parts[3] if len(parts) > 3 else ""
+                    topic = " ".join(parts[4:]) if len(parts) > 4 else ""
+                    
+                    row_data = [username, influence, followers, sentiment, viral_power, topic, twitter_link]
+                    table_data.append(row_data)
+    
+    # Set appropriate headers
+    if table_title == "🔥 病毒式传播推文":
+        headers = ["用户名", "传播力", "点赞", "转推", "回复", "情绪", "话题", "推文链接"]
+    elif table_title == "👑 高影响力用户动态":
+        headers = ["用户名", "影响力", "粉丝数", "情绪", "传播力", "话题", "推文链接"]
     
     return headers, table_data
 
@@ -560,6 +590,42 @@ def display_ai_summary_section(lines):
     elif not error_found:
         st.markdown("### 🤖 AI 智能分析摘要")
         st.warning("无AI分析摘要数据")
+
+def display_raw_output_properly(output_text):
+    """Display raw output with proper handling for long text"""
+    
+    # Show raw output in expandable section for debugging
+    with st.expander("🔍 查看原始分析输出"):
+        # Split into chunks if too long
+        if len(output_text) > 10000:
+            st.warning("输出较长，已分段显示")
+            
+            # Split by major sections
+            sections = output_text.split('🔍')
+            for i, section in enumerate(sections):
+                if section.strip():
+                    st.text_area(
+                        f"输出段 {i+1}",
+                        ('🔍' + section) if i > 0 else section,
+                        height=300,
+                        key=f"output_section_{i}"
+                    )
+        else:
+            # Display normally
+            st.text_area(
+                "完整输出",
+                output_text,
+                height=400,
+                key="full_output"
+            )
+        
+        # Add download option
+        st.download_button(
+            label="📥 下载完整输出",
+            data=output_text,
+            file_name=f"sentiment_analysis_output.txt",
+            mime="text/plain"
+        )
 
 def display_analysis_results(analysis_result, output_text):
     """Display the analysis results with all fixes applied"""
@@ -630,9 +696,9 @@ def display_analysis_results(analysis_result, output_text):
             elif line and any(char.isdigit() for char in line[:5]):
                 st.text(line)
     
-    # Parse and display viral tweets
+    # Parse and display viral tweets - USING NEW ENHANCED PARSER
     st.markdown("### 🔥 病毒式传播推文")
-    viral_headers, viral_data = parse_table_from_output(output_text, "🔥 病毒式传播推文")
+    viral_headers, viral_data = parse_table_from_output_enhanced(output_text, "🔥 病毒式传播推文")
     
     if viral_data:
         df_viral = pd.DataFrame(viral_data, columns=viral_headers if viral_headers else 
@@ -652,9 +718,9 @@ def display_analysis_results(analysis_result, output_text):
     else:
         st.info("暂无符合条件的病毒式传播推文")
     
-    # Parse and display high influence tweets
+    # Parse and display high influence tweets - USING NEW ENHANCED PARSER
     st.markdown("### 👑 高影响力用户动态")
-    influence_headers, influence_data = parse_table_from_output(output_text, "👑 高影响力用户动态")
+    influence_headers, influence_data = parse_table_from_output_enhanced(output_text, "👑 高影响力用户动态")
     
     if influence_data:
         df_influence = pd.DataFrame(influence_data, columns=influence_headers if influence_headers else 
@@ -747,9 +813,8 @@ def main():
             
         display_analysis_results(analysis_result, output_text)
         
-        # Show raw output in expandable section for debugging
-        with st.expander("🔍 查看原始分析输出"):
-            st.text(output_text)
+        # Show raw output in expandable section for debugging - USING NEW FUNCTION
+        display_raw_output_properly(output_text)
     
     elif analyze_button and not token_symbol:
         st.error("请输入代币符号")
