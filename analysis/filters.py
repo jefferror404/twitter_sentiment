@@ -25,10 +25,15 @@ class TweetFilter:
         # Initialize team filter with silent mode
         self.team_filter = None
         if TEAM_FILTER_CONFIG['enable_team_filtering']:
-            self.team_filter = TeamFilter(
-                TEAM_FILTER_CONFIG['excel_file_path'], 
-                silent_mode=silent_mode
-            )
+            try:
+                self.team_filter = TeamFilter(
+                    TEAM_FILTER_CONFIG['excel_file_path'], 
+                    silent_mode=silent_mode
+                )
+            except Exception as e:
+                if not silent_mode:
+                    print(f"Team filter initialization failed: {e}")
+                self.team_filter = None
         
         self.total_tokens_used = 0
         self.filtered_counts = {
@@ -61,7 +66,10 @@ class TweetFilter:
         """Check if username belongs to the project team"""
         if not self.team_filter:
             return False
-        return self.team_filter.is_team_account(username, token_symbol)
+        try:
+            return self.team_filter.is_team_account(username, token_symbol)
+        except:
+            return False
     
     def detect_basic_spam(self, text, user_data):
         """Basic spam detection using patterns and keywords"""
@@ -239,10 +247,16 @@ class TweetFilter:
             print(f"\n🔍 开始推文过滤 (总共 {len(tweets)} 条)...")
             
             # Show team filtering info
-            if self.team_filter and TEAM_FILTER_CONFIG['show_team_accounts_debug']:
-                self.team_filter.show_team_accounts_for_token(token_symbol)
+            if self.team_filter and TEAM_FILTER_CONFIG.get('show_team_accounts_debug', False):
+                try:
+                    self.team_filter.show_team_accounts_for_token(token_symbol)
+                except:
+                    pass
             elif self.team_filter:
-                self.team_filter.validate_token_coverage(token_symbol)
+                try:
+                    self.team_filter.validate_token_coverage(token_symbol)
+                except:
+                    pass
         
         filtered_tweets = []
         exclusion_reasons = []
@@ -261,7 +275,7 @@ class TweetFilter:
                         'detailed_reason': self.get_detailed_filter_reason(reason),
                         'text_preview': parsed_tweet['text'][:100] + '...' if len(parsed_tweet['text']) > 100 else parsed_tweet['text'],
                         'full_text': parsed_tweet['text'],
-                        'followers': parsed_tweet['user']['followers_count']
+                        'followers': parsed_tweet['user'].get('followers_count', 0)
                     })
                     self.filtered_counts['total_filtered'] += 1
                 else:
@@ -277,7 +291,7 @@ class TweetFilter:
         if not self.silent_mode:
             print(f"📊 过滤结果:")
             print(f"   🗞️  新闻账户过滤: {self.filtered_counts['news_accounts']} 条")
-            if self.team_filter and hasattr(self.team_filter, 'is_loaded') and self.team_filter.is_loaded:
+            if self.team_filter and hasattr(self.team_filter, 'is_loaded') and getattr(self.team_filter, 'is_loaded', False):
                 print(f"   👥 团队账户过滤: {self.filtered_counts['team_accounts']} 条")
             print(f"   🚫 基础垃圾过滤: {self.filtered_counts['spam_basic']} 条")
             print(f"   🤖 AI垃圾过滤: {self.filtered_counts['spam_ai']} 条")
@@ -434,3 +448,37 @@ class TweetFilter:
         except Exception as e:
             print(f"导出过滤详情失败: {e}")
             return None
+    
+    # Additional helper methods for compatibility
+    def is_valid_tweet(self, parsed_tweet, token_symbol):
+        """Check if tweet passes basic filtering criteria"""
+        try:
+            should_exclude, reason = self.should_exclude_tweet(parsed_tweet, token_symbol)
+            return not should_exclude
+        except:
+            return True  # Include tweet if filtering check fails
+    
+    def get_exclusion_reason(self, parsed_tweet):
+        """Get exclusion reason for a parsed tweet"""
+        try:
+            text = parsed_tweet.get('text', '').lower()
+            username = parsed_tweet.get('user', {}).get('username', '')
+            
+            if self.is_news_account(username):
+                return f"News account: @{username}"
+            
+            is_spam, spam_reason = self.detect_basic_spam(parsed_tweet.get('text', ''), parsed_tweet.get('user', {}))
+            if is_spam:
+                return f"Basic spam: {spam_reason}"
+            
+            return "Unknown exclusion reason"
+        except:
+            return "Filter check failed"
+    
+    def contains_spam_patterns(self, text):
+        """Check if text contains spam patterns"""
+        try:
+            is_spam, reason = self.detect_basic_spam(text, {})
+            return is_spam
+        except:
+            return False
