@@ -21,12 +21,13 @@ class TopicAnalyzer:
     
     def get_api_params(self, max_tokens=800):
         """Get correct API parameters for GPT-5 compatibility"""
-        base_params = {'temperature': 0.3}
+        base_params = {}
         
         if self.model.startswith('gpt-5'):
             base_params['max_completion_tokens'] = max_tokens
         else:
             base_params['max_tokens'] = max_tokens
+            base_params['temperature'] = 0.3
         
         return base_params
     
