@@ -1,6 +1,6 @@
-# analysis/sentiment.py (Enhanced with Silent Mode)
+# analysis/sentiment.py (Complete Fixed Version)
 """
-Enhanced sentiment analysis with silent mode for clean output
+Enhanced sentiment analysis with GPT-5 support and silent mode for clean output
 """
 
 try:
@@ -19,22 +19,38 @@ from config import ANALYSIS_CONFIG
 
 
 class CryptoSentimentAnalyzer:
-    def __init__(self, openai_api_key=None, silent_mode=False):
+    def __init__(self, openai_api_key=None, model_name=None, silent_mode=False):
         self.openai_client = OpenAI(api_key=openai_api_key) if openai_api_key and OPENAI_AVAILABLE else None
+        self.model = model_name or ANALYSIS_CONFIG.get('openai_model', 'gpt-4o-mini')
         self.total_tokens_used = 0
         self.price_context = None
         self.silent_mode = silent_mode
         
-        # Initialize components
-        self.tweet_filter = TweetFilter(openai_api_key, silent_mode=silent_mode)
+        # Initialize components with model support
+        self.tweet_filter = TweetFilter(openai_api_key, model_name=self.model, silent_mode=silent_mode)
         self.influence_calculator = InfluenceCalculator()
-        self.topic_analyzer = TopicAnalyzer(openai_api_key)
+        self.topic_analyzer = TopicAnalyzer(openai_api_key, model_name=self.model)
         self.coinex_api = CoinExAPI()
         self.tweet_parser = TweetParser()
         self.report_formatter = ReportFormatter()
     
+    def get_api_params(self, max_tokens=800):
+        """Get correct API parameters based on model version - CRITICAL FIX"""
+        base_params = {
+            'temperature': 0.3,
+            'timeout': 20
+        }
+        
+        # GPT-5 models use max_completion_tokens instead of max_tokens
+        if self.model.startswith('gpt-5'):
+            base_params['max_completion_tokens'] = max_tokens
+        else:
+            base_params['max_tokens'] = max_tokens
+        
+        return base_params
+    
     def analyze_sentiment_and_topic_combined(self, text):
-        """Combined sentiment and topic analysis with price context awareness"""
+        """Combined sentiment and topic analysis with GPT-5 support"""
         if not self.openai_client:
             return None
         
@@ -90,7 +106,7 @@ IMPORTANT - 价格感知情感分析指引:
             
             TOPIC Categories - Choose the MOST SPECIFIC sub-topic:
             
-            🆕 SPECIFIC TOPIC EXAMPLES:
+            SPECIFIC TOPIC EXAMPLES:
             Technology: 智能合约漏洞, 跨链桥风险, 共识机制升级, DeFi协议风险, 钱包安全
             Market: 大户抛售, 机构买入, 交易所上架, 做市商操控, 流动性危机
             Community: CEO离职, 团队解散, 社区分歧, 开发停滞, 路线图延期
@@ -112,11 +128,13 @@ IMPORTANT - 价格感知情感分析指引:
             REASON: [One sentence explanation including price context influence if applicable]
             """
             
+            # Use correct parameters based on model
+            api_params = self.get_api_params(120)
+            
             response = self.openai_client.chat.completions.create(
-                model=ANALYSIS_CONFIG['openai_model'],
+                model=self.model,
                 messages=[{"role": "user", "content": prompt}],
-                max_completion_tokens=120,
-                temperature=0.1
+                **api_params
             )
             
             content = response.choices[0].message.content.strip()
@@ -171,6 +189,8 @@ IMPORTANT - 价格感知情感分析指引:
             }
             
         except Exception as e:
+            if not self.silent_mode:
+                print(f"OpenAI分析错误: {e}")
             return None
     
     def analyze_tweet_sentiment(self, text):
@@ -207,7 +227,7 @@ IMPORTANT - 价格感知情感分析指引:
         }
     
     def generate_openai_summary(self, tweets_sample, token_symbol):
-        """Generate OpenAI summary of tweets in Simplified Chinese with price context"""
+        """Generate OpenAI summary with GPT-5 support"""
         if not self.openai_client:
             return "OpenAI不可用，无法生成智能摘要"
         
@@ -244,11 +264,13 @@ IMPORTANT - 价格感知情感分析指引:
             请务必用简体中文回复。
             """
             
+            # Use correct parameters for GPT-5
+            api_params = self.get_api_params(300)
+            
             response = self.openai_client.chat.completions.create(
-                model=ANALYSIS_CONFIG['openai_model'],
+                model=self.model,
                 messages=[{"role": "user", "content": prompt}],
-                max_completion_tokens=300,
-                temperature=0.3
+                **api_params
             )
             
             # Track token usage
@@ -258,7 +280,10 @@ IMPORTANT - 价格感知情感分析指引:
             return response.choices[0].message.content.strip()
             
         except Exception as e:
-            return f"OpenAI摘要生成失败: {e}"
+            error_msg = f"OpenAI摘要生成失败: {e}"
+            if not self.silent_mode:
+                print(error_msg)
+            return error_msg
     
     def comprehensive_analysis(self, tweets, token_symbol):
         """Perform comprehensive price-aware sentiment analysis with enhanced filtering"""
@@ -395,7 +420,7 @@ IMPORTANT - 价格感知情感分析指引:
         return result
 
     def comprehensive_analysis_silent(self, tweets, token_symbol, target_days):
-        """🆕 Silent version of comprehensive analysis with clean output"""
+        """Silent version of comprehensive analysis with clean output"""
         # Step 1: Get price data (silent)
         self.price_context = self.coinex_api.get_price_context_silent(token_symbol)
         price_success = self.price_context is not None
@@ -406,7 +431,7 @@ IMPORTANT - 价格感知情感分析指引:
         )
         
         if not filtered_tweets:
-            # 🆕 Handle case where no tweets remain after filtering
+            # Handle case where no tweets remain after filtering
             return None
         
         # Step 3: Topic analysis (silent)
@@ -415,7 +440,12 @@ IMPORTANT - 价格感知情感分析指引:
             parsed = self.tweet_parser.parse_tweet_data(tweet)
             tweets_for_topic_analysis.append({'text': parsed['text']})
         
-        self.topic_analyzer.generate_bulk_topic_analysis_with_sentiment(tweets_for_topic_analysis, token_symbol)
+        # Use silent topic analysis
+        try:
+            self.topic_analyzer.generate_bulk_topic_analysis_with_sentiment_silent(tweets_for_topic_analysis, token_symbol)
+        except Exception as e:
+            if not self.silent_mode:
+                print(f"OpenAI话题分析错误: {e}")
         
         # Step 4: Analyze tweets (silent)
         tweet_analyses = []
@@ -475,10 +505,18 @@ IMPORTANT - 价格感知情感分析指引:
                 continue
         
         # Consolidate stats
-        topic_sentiment_analysis = self.topic_analyzer.analyze_topic_sentiment_distribution(tweet_analyses)
-        self.total_tokens_used += self.tweet_filter.total_tokens_used
-        self.total_tokens_used += self.topic_analyzer.total_tokens_used
-        team_filter_stats = self.tweet_filter.get_team_filter_stats()
+        try:
+            topic_sentiment_analysis = self.topic_analyzer.analyze_topic_sentiment_distribution(tweet_analyses)
+        except:
+            topic_sentiment_analysis = {}
+            
+        self.total_tokens_used += getattr(self.tweet_filter, 'total_tokens_used', 0)
+        self.total_tokens_used += getattr(self.topic_analyzer, 'total_tokens_used', 0)
+        
+        try:
+            team_filter_stats = self.tweet_filter.get_team_filter_stats()
+        except:
+            team_filter_stats = {}
         
         # Create result
         result = {
@@ -487,7 +525,7 @@ IMPORTANT - 价格感知情感分析指引:
             'total_weighted_impact': total_weighted_impact,
             'high_influence_tweets': high_influence_tweets,
             'viral_tweets': viral_tweets,
-            'filtering_stats': self.tweet_filter.filtered_counts,
+            'filtering_stats': getattr(self.tweet_filter, 'filtered_counts', {}),
             'team_filter_stats': team_filter_stats,
             'price_aware_stats': {
                 'price_data_available': price_success,
@@ -496,16 +534,20 @@ IMPORTANT - 价格感知情感分析指引:
                 'price_context': self.price_context
             },
             'exclusion_reasons': exclusion_reasons,
-            'bulk_topics': self.topic_analyzer.bulk_topics,
+            'bulk_topics': getattr(self.topic_analyzer, 'bulk_topics', {}),
             'topic_sentiment_analysis': topic_sentiment_analysis,
             'total_tokens_used': self.total_tokens_used
         }
         
-        # 🆕 Generate clean, simplified report
-        self.report_formatter.print_clean_report(
-            token_symbol, len(tweets), len(filtered_tweets), sentiment_summary, 
-            high_influence_tweets, viral_tweets, tweet_analyses, tweets, result,
-            self.generate_openai_summary, tweets_for_topic_analysis, target_days
-        )
+        # Generate clean, simplified report
+        try:
+            self.report_formatter.print_clean_report(
+                token_symbol, len(tweets), len(filtered_tweets), sentiment_summary, 
+                high_influence_tweets, viral_tweets, tweet_analyses, tweets, result,
+                self.generate_openai_summary, tweets_for_topic_analysis, target_days
+            )
+        except Exception as e:
+            if not self.silent_mode:
+                print(f"报告生成错误: {e}")
         
         return result
