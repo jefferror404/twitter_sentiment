@@ -115,7 +115,7 @@ IMPORTANT - 价格感知情感分析指引:
             response = self.openai_client.chat.completions.create(
                 model=ANALYSIS_CONFIG['openai_model'],
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=120,
+                max_completion_tokens=120,
                 temperature=0.1
             )
             
@@ -247,7 +247,7 @@ IMPORTANT - 价格感知情感分析指引:
             response = self.openai_client.chat.completions.create(
                 model=ANALYSIS_CONFIG['openai_model'],
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=300,
+                max_completion_tokens=300,
                 temperature=0.3
             )
             
