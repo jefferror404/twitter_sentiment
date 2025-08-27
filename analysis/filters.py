@@ -1,6 +1,6 @@
-# analysis/filters.py (Enhanced with Silent Team Filtering)
+# analysis/filters.py (Enhanced with Silent Team Filtering and GPT-5 Support)
 """
-Enhanced tweet filtering with silent team filtering mode
+Enhanced tweet filtering with silent team filtering mode and GPT-5 compatibility
 """
 
 import re
@@ -10,18 +10,19 @@ try:
 except ImportError:
     OPENAI_AVAILABLE = False
 
-from config import NEWS_ACCOUNTS, SPAM_PATTERNS, TEAM_FILTER_CONFIG
+from config import NEWS_ACCOUNTS, SPAM_PATTERNS, TEAM_FILTER_CONFIG, ANALYSIS_CONFIG
 from data.team_filter import TeamFilter
 
 
 class TweetFilter:
-    def __init__(self, openai_api_key=None, silent_mode=False):
+    def __init__(self, openai_api_key=None, model_name=None, silent_mode=False):
         self.news_accounts = NEWS_ACCOUNTS
         self.spam_patterns = SPAM_PATTERNS
         self.openai_client = OpenAI(api_key=openai_api_key) if openai_api_key and OPENAI_AVAILABLE else None
+        self.model = model_name or ANALYSIS_CONFIG.get('openai_model', 'gpt-4o-mini')
         self.silent_mode = silent_mode
         
-        # 🆕 Initialize team filter with silent mode
+        # Initialize team filter with silent mode
         self.team_filter = None
         if TEAM_FILTER_CONFIG['enable_team_filtering']:
             self.team_filter = TeamFilter(
@@ -38,6 +39,17 @@ class TweetFilter:
             'informative_ai': 0,
             'total_filtered': 0
         }
+    
+    def get_api_params(self, max_tokens=300):
+        """Get correct API parameters for GPT-5 compatibility"""
+        base_params = {'temperature': 0.1}
+        
+        if self.model.startswith('gpt-5'):
+            base_params['max_completion_tokens'] = max_tokens
+        else:
+            base_params['max_tokens'] = max_tokens
+        
+        return base_params
     
     def is_news_account(self, username):
         """Check if username belongs to news/informative accounts"""
@@ -89,7 +101,7 @@ class TweetFilter:
         return False, "Clean"
     
     def ai_content_filter(self, text, username):
-        """Use AI to detect spam and informative content with shorter reasons"""
+        """Use AI to detect spam and informative content with GPT-5 support"""
         if not self.openai_client:
             return {'is_spam': False, 'is_informative': False, 'reason': 'OpenAI not available'}
         
@@ -129,11 +141,13 @@ class TweetFilter:
             REASON: [Very brief explanation, max 20 chars]
             """
             
+            # Use correct parameters based on model
+            api_params = self.get_api_params(50)
+            
             response = self.openai_client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=self.model,
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=50,
-                temperature=0.1
+                **api_params
             )
             
             content = response.choices[0].message.content.strip()
@@ -263,7 +277,7 @@ class TweetFilter:
         if not self.silent_mode:
             print(f"📊 过滤结果:")
             print(f"   🗞️  新闻账户过滤: {self.filtered_counts['news_accounts']} 条")
-            if self.team_filter and self.team_filter.is_loaded:
+            if self.team_filter and hasattr(self.team_filter, 'is_loaded') and self.team_filter.is_loaded:
                 print(f"   👥 团队账户过滤: {self.filtered_counts['team_accounts']} 条")
             print(f"   🚫 基础垃圾过滤: {self.filtered_counts['spam_basic']} 条")
             print(f"   🤖 AI垃圾过滤: {self.filtered_counts['spam_ai']} 条")
@@ -278,11 +292,17 @@ class TweetFilter:
         if not self.team_filter:
             return {'enabled': False}
         
-        stats = self.team_filter.get_filtering_stats()
-        stats['enabled'] = True
-        stats['filtered_count'] = self.filtered_counts['team_accounts']
-        
-        return stats
+        try:
+            stats = self.team_filter.get_filtering_stats()
+            stats['enabled'] = True
+            stats['filtered_count'] = self.filtered_counts['team_accounts']
+            return stats
+        except:
+            return {
+                'enabled': True,
+                'filtered_count': self.filtered_counts['team_accounts'],
+                'error': 'Failed to get team filter stats'
+            }
     
     def filter_tweets_silent(self, tweets, parse_tweet_func, token_symbol):
         """Silent version of filter_tweets"""
@@ -291,7 +311,14 @@ class TweetFilter:
         
         # Silent team validation
         if self.team_filter:
-            self.team_filter.validate_token_coverage_silent(token_symbol)
+            try:
+                if hasattr(self.team_filter, 'validate_token_coverage_silent'):
+                    self.team_filter.validate_token_coverage_silent(token_symbol)
+                elif hasattr(self.team_filter, 'validate_token_coverage'):
+                    # Fallback if silent method doesn't exist
+                    pass
+            except:
+                pass
         
         for i, tweet in enumerate(tweets):
             try:
@@ -306,18 +333,104 @@ class TweetFilter:
                         'detailed_reason': self.get_detailed_filter_reason(reason),
                         'text_preview': parsed_tweet['text'][:100] + '...' if len(parsed_tweet['text']) > 100 else parsed_tweet['text'],
                         'full_text': parsed_tweet['text'],
-                        'followers': parsed_tweet['user']['followers_count']
+                        'followers': parsed_tweet['user'].get('followers_count', 0)
                     })
                     self.filtered_counts['total_filtered'] += 1
                 else:
                     filtered_tweets.append(tweet)
                     
             except Exception:
+                # Include tweet if filtering fails
                 filtered_tweets.append(tweet)
         
         return filtered_tweets, exclusion_reasons
     
     def validate_token_coverage_silent(self, token_symbol):
         """Silent version of validate_token_coverage"""
-        token_symbol = token_symbol.upper().strip()
-        return token_symbol in self.team_accounts_db
+        if not self.team_filter:
+            return False
+        
+        try:
+            token_symbol = token_symbol.upper().strip()
+            if hasattr(self.team_filter, 'team_accounts_db'):
+                return token_symbol in self.team_filter.team_accounts_db
+            else:
+                return False
+        except:
+            return False
+    
+    def reset_counts(self):
+        """Reset filtering counts for new analysis"""
+        self.filtered_counts = {
+            'news_accounts': 0,
+            'spam_basic': 0,
+            'team_accounts': 0,
+            'spam_ai': 0,
+            'informative_ai': 0,
+            'total_filtered': 0
+        }
+        self.total_tokens_used = 0
+    
+    def get_filter_summary(self):
+        """Get summary of filtering results"""
+        return {
+            'total_filtered': self.filtered_counts['total_filtered'],
+            'breakdown': self.filtered_counts.copy(),
+            'tokens_used': self.total_tokens_used
+        }
+    
+    def print_filter_stats(self):
+        """Print detailed filtering statistics (non-silent mode only)"""
+        if self.silent_mode:
+            return
+        
+        print(f"\n📊 详细过滤统计:")
+        for filter_type, count in self.filtered_counts.items():
+            if count > 0:
+                print(f"   {filter_type}: {count} 条")
+        
+        if self.total_tokens_used > 0:
+            print(f"   AI过滤使用Token: {self.total_tokens_used}")
+    
+    def get_exclusion_summary(self, exclusion_reasons):
+        """Generate summary of exclusion reasons"""
+        if not exclusion_reasons:
+            return "无推文被过滤"
+        
+        reason_counts = {}
+        for exclusion in exclusion_reasons:
+            reason_type = exclusion['reason'].split(':')[0]
+            reason_counts[reason_type] = reason_counts.get(reason_type, 0) + 1
+        
+        summary_parts = []
+        for reason_type, count in sorted(reason_counts.items(), key=lambda x: x[1], reverse=True):
+            summary_parts.append(f"{reason_type}: {count}条")
+        
+        return "; ".join(summary_parts)
+    
+    def export_filtered_tweets(self, exclusion_reasons, filename=None):
+        """Export filtered tweets to file for review (debug mode)"""
+        if self.silent_mode or not exclusion_reasons:
+            return None
+        
+        if not filename:
+            filename = f"filtered_tweets_{len(exclusion_reasons)}.txt"
+        
+        try:
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write("被过滤推文详情\n")
+                f.write("=" * 50 + "\n\n")
+                
+                for exclusion in exclusion_reasons:
+                    f.write(f"推文 #{exclusion['tweet_num']}\n")
+                    f.write(f"用户: @{exclusion['user']} (粉丝: {exclusion['followers']:,})\n")
+                    f.write(f"过滤原因: {exclusion['reason']}\n")
+                    f.write(f"内容: {exclusion['full_text']}\n")
+                    f.write("-" * 30 + "\n\n")
+            
+            print(f"📄 过滤详情已导出到: {filename}")
+            return filename
+            
+        except Exception as e:
+            print(f"导出过滤详情失败: {e}")
+            return None
