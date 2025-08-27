@@ -36,15 +36,14 @@ class CryptoSentimentAnalyzer:
     
     def get_api_params(self, max_tokens=800):
         """Get correct API parameters based on model version"""
-        base_params = {
-            'temperature': 0.3
-        }
+        base_params = {}
         
         # GPT-5 models use max_completion_tokens instead of max_tokens
         if self.model.startswith('gpt-5'):
             base_params['max_completion_tokens'] = max_tokens
         else:
             base_params['max_tokens'] = max_tokens
+            base_params['temperature'] = 0.3
         
         return base_params
     
