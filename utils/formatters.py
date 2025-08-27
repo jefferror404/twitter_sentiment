@@ -38,9 +38,9 @@ class ReportFormatter:
     def print_clean_report(self, token, total_tweets, effective_tweets, sentiment_summary, 
                           high_influence_tweets, viral_tweets, tweet_analyses, original_tweets, result,
                           generate_summary_func, tweets_for_summary, target_days):
-        """🆕 Clean, simplified report format"""
+        """Clean, simplified report format"""
         
-        # 🆕 Updated header format
+        # Updated header format
         print(f'🔍 "{token}" 近{target_days}天推文情感分析')
         print(f"原获取推文数量: {total_tweets}; 过滤后有效推文: {effective_tweets}")
         
@@ -48,12 +48,12 @@ class ReportFormatter:
         price_stats = result.get('price_aware_stats', {})
         if price_stats.get('price_data_available') and price_stats.get('price_context'):
             price_data = price_stats['price_context']
-            print(f"💰 站内数据总览:")  # 🆕 Updated label
+            print(f"💰 站内数据总览:")
             print(f"   💵 当前价格: ${price_data['price_usd']:.6f}")
             print(f"   📈 24H变化: {price_data['change_rate']:+.2%}")
             print(f"   💧 24H交易量: ${price_data['volume_usd']:,.0f}")
         else:
-            print("💰 站内数据总览:")  # 🆕 Updated label
+            print("💰 站内数据总览:")
             print("   💰 价格数据: 未获取到有效数据")
         
         print()
@@ -69,11 +69,6 @@ class ReportFormatter:
         print(f"   ❌ 负面: {sentiment_summary['NEGATIVE']} 条 ({neg_pct:.1f}%)")
         print(f"   ⚪ 中性: {sentiment_summary['NEUTRAL']} 条 ({neu_pct:.1f}%)")
         
-        # 🆕 Remove AI analysis success rate lines
-        # No longer showing:
-        # - AI分析成功
-        # - 价格感知分析
-        
         # AI summary (keep entirely)
         print(f"\n🤖 AI 智能分析摘要:")
         print("   " + "="*50)
@@ -87,7 +82,7 @@ class ReportFormatter:
         except Exception as e:
             print(f"   AI摘要生成失败: {e}")
         
-        # 🆕 Simplified Topic analysis (remove sentiment breakdown)
+        # Simplified Topic analysis (remove sentiment breakdown)
         print(f"\n📈 热门话题榜:")
         bulk_topics = result.get('bulk_topics', [])
         
@@ -95,19 +90,18 @@ class ReportFormatter:
             print("   AI智能话题分析:")
             for i, topic in enumerate(bulk_topics[:6]):
                 bar = '█' * min(int(topic['count']/2), 8) + '▁' * max(0, 8 - int(topic['count']/2))
-                # 🆕 Remove the [主要:积极 20/6] part
                 print(f"   {i+1:2d}. {topic['name']:<15} {bar} ({topic['count']}条)")
         else:
             print("   暂无话题分析结果")
         
-        # High influence tweets and viral tweets (keep entirely)
+        # High influence tweets and viral tweets (keep entirely) - FIXED: Actually print the tables
         print(f"\n🔥 病毒式传播推文 (传播力≥5.0):")
         if viral_tweets:
             sorted_viral = sorted(viral_tweets, key=lambda x: x['viral']['viral_index'], reverse=True)[:6]
             
-            # 🆕 Increased width for topic column
+            # Increased width for topic column
             columns = ["用户名", "传播力", "点赞", "转推", "回复", "情绪", "话题", "推文链接"]
-            widths = [12, 8, 8, 8, 8, 8, 25, 45]  # Increased topic width from 18 to 25
+            widths = [12, 8, 8, 8, 8, 8, 25, 45]
             
             self.print_table_header(columns, widths)
             
@@ -132,7 +126,7 @@ class ReportFormatter:
                     f"{engagement['retweets']:,}",
                     f"{engagement['replies']:,}",
                     tweet['sentiment']['sentiment'],
-                    tweet_topic,  # 🆕 Full topic name without truncation
+                    tweet_topic,
                     tweet_link
                 ]
                 self.print_table_row(values, widths)
@@ -144,9 +138,9 @@ class ReportFormatter:
         if high_influence_tweets:
             sorted_influence = sorted(high_influence_tweets, key=lambda x: x['influence']['influence_score'], reverse=True)[:8]
             
-            # 🆕 Increased width for topic column
+            # Increased width for topic column
             columns = ["用户名", "影响力", "粉丝数", "情绪", "传播力", "话题", "推文链接"]
-            widths = [12, 8, 10, 8, 8, 25, 45]  # Increased topic width from 18 to 25
+            widths = [12, 8, 10, 8, 8, 25, 45]
             
             self.print_table_header(columns, widths)
             
@@ -170,7 +164,7 @@ class ReportFormatter:
                     followers,
                     tweet['sentiment']['sentiment'],
                     f"{tweet['viral']['viral_index']:.1f}",
-                    tweet_topic,  # 🆕 Full topic name without truncation
+                    tweet_topic,
                     tweet_link
                 ]
                 self.print_table_row(values, widths)
@@ -178,14 +172,12 @@ class ReportFormatter:
             print("   暂无符合条件的高影响力用户推文")
 
     def print_filtered_tweets_table(self, exclusion_reasons, original_tweets):
-        """Print detailed table of filtered tweets with wider AI columns (keep logic but don't show)"""
-        # Keep all the logic for internal processing but don't print anything
-        # This maintains the functionality for debugging purposes if needed
+        """Print detailed table of filtered tweets - ENABLED for debugging"""
         
         if not exclusion_reasons:
             return
         
-        # Enhanced grouping with team accounts (logic preserved)
+        # Enhanced grouping with team accounts
         filter_groups = {
             '新闻账户': [],
             '团队账户': [],
@@ -206,10 +198,7 @@ class ReportFormatter:
             elif "AI informative" in reason['reason']:
                 filter_groups['AI信息'].append(reason)
         
-        # Logic is preserved but output is suppressed
-        # This can be re-enabled for debugging by uncommenting the print statements below
-        
-        """
+        # Print the filtered tweets table (uncommented for debugging)
         print(f"\n🔍 已过滤推文详情表 (共 {len(exclusion_reasons)} 条):")
         print("=" * 140)
         
@@ -275,7 +264,6 @@ class ReportFormatter:
         
         print(f"\n💡 验证提示: 点击推文链接可查看完整内容，验证过滤准确性")
         print("=" * 140)
-        """
 
     def print_enhanced_report(self, token, tweet_count, sentiment_summary, total_weighted_impact,
                              high_influence_tweets, viral_tweets, tweet_analyses, original_tweets, result,
@@ -500,26 +488,9 @@ class ReportFormatter:
         else:
             print("   暂无符合条件的高影响力用户推文")
         
-        # Show detailed filtered tweets table if available (keep logic but suppress output)
+        # Show detailed filtered tweets table (now enabled)
         exclusion_reasons = result.get('exclusion_reasons', [])
         if exclusion_reasons:
             self.print_filtered_tweets_table(exclusion_reasons, original_tweets)
         
         print(f"\n{'='*80}")
-        
-        # OpenAI token usage summary (commented out for clean output)
-        """
-        total_tokens_used = result.get('total_tokens_used', 0)
-        if total_tokens_used > 0:
-            estimated_cost = (total_tokens_used * 0.375) / 1000000
-            
-            print(f"💰 OpenAI API使用统计:")
-            print(f"   🔢 总Tokens消耗: {total_tokens_used:,}")
-            print(f"   💵 预估费用: ${estimated_cost:.4f} USD")
-            print(f"   📝 模型: gpt-4o-mini")
-            print(f"   🔍 过滤调用: ~{filtering_stats.get('spam_ai', 0) + filtering_stats.get('informative_ai', 0)} 次")
-            print(f"   📊 分析调用: ~{len(tweet_analyses)} 次")
-            if price_stats.get('price_data_available'):
-                print(f"   💰 价格感知增强: {price_stats['price_influenced_count']} 条推文")
-            print(f"\n{'='*80}")
-        """
