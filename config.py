@@ -48,7 +48,7 @@ ANALYSIS_CONFIG = {
     'max_pages_per_call': 3,
     'max_tweets_for_summary': 15,
     'max_tweets_for_topic_analysis': 20,
-    'openai_model': "gpt-5-nano"
+    'openai_model': "gpt-4o-mini"
 }
 
 # Simplified Smart Search Configuration
