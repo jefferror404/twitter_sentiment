@@ -34,18 +34,6 @@ st.markdown("""
         border-radius: 10px;
         margin: 1rem 0;
     }
-    .sentiment-positive {
-        color: #43946c;
-        font-weight: bold;
-    }
-    .sentiment-negative {
-        color: #dc3545;
-        font-weight: bold;
-    }
-    .sentiment-neutral {
-        color: #6c757d;
-        font-weight: bold;
-    }
     
     /* Custom button styling */
     .stButton > button {
@@ -59,13 +47,8 @@ st.markdown("""
         background-color: #367a55 !important;
         color: white !important;
     }
-    .stButton > button:focus {
-        background-color: #43946c !important;
-        color: white !important;
-        box-shadow: none !important;
-    }
     
-    /* Enhanced horizontal sentiment bars - stacked vertically */
+    /* Enhanced vertical sentiment bars */
     .sentiment-bars-container {
         margin: 20px 0;
         background: #f8f9fa;
@@ -77,8 +60,8 @@ st.markdown("""
     .sentiment-bar-row {
         display: flex;
         align-items: center;
-        margin-bottom: 12px;
-        min-height: 40px;
+        margin-bottom: 15px;
+        min-height: 45px;
     }
     
     .sentiment-bar-row:last-child {
@@ -86,31 +69,31 @@ st.markdown("""
     }
     
     .sentiment-bar-single {
-        height: 35px;
+        height: 40px;
         border-radius: 8px;
         display: flex;
         align-items: center;
-        justify-content: flex-start;
-        padding: 0 12px;
-        margin-right: 15px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        justify-content: center;
+        padding: 0 15px;
+        margin-right: 20px;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.15);
         color: white;
         font-weight: bold;
-        font-size: 14px;
-        min-width: 50px;
+        font-size: 16px;
+        min-width: 60px;
         flex-shrink: 0;
     }
     
     .sentiment-positive-single {
-        background-color: #43946c;
+        background: linear-gradient(135deg, #43946c 0%, #5aa876 100%);
     }
     
     .sentiment-negative-single {
-        background-color: #dc3545;
+        background: linear-gradient(135deg, #dc3545 0%, #e85563 100%);
     }
     
     .sentiment-neutral-single {
-        background-color: #6c757d;
+        background: linear-gradient(135deg, #6c757d 0%, #8a9099 100%);
     }
     
     .sentiment-bar-text {
@@ -119,47 +102,54 @@ st.markdown("""
         color: #333;
         display: flex;
         align-items: center;
+        flex-grow: 1;
     }
     
     .sentiment-emoji {
-        font-size: 18px;
-        margin-right: 8px;
+        font-size: 20px;
+        margin-right: 10px;
     }
     
     /* Price data styling */
     .price-container {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border-radius: 15px;
-        padding: 20px;
+        padding: 25px;
         margin: 20px 0;
         color: white;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
     }
     
     .price-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-        margin-top: 15px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
     }
     
     .price-item {
-        background: rgba(255,255,255,0.1);
-        border-radius: 10px;
-        padding: 15px;
+        background: rgba(255,255,255,0.15);
+        border-radius: 12px;
+        padding: 20px;
         text-align: center;
         backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.25);
+        transition: transform 0.2s ease;
+    }
+    
+    .price-item:hover {
+        transform: translateY(-2px);
     }
     
     .price-label {
         font-size: 14px;
-        opacity: 0.8;
-        margin-bottom: 5px;
+        opacity: 0.85;
+        margin-bottom: 8px;
+        font-weight: 500;
     }
     
     .price-value {
-        font-size: 18px;
+        font-size: 20px;
         font-weight: bold;
         color: #fff;
     }
@@ -177,92 +167,50 @@ st.markdown("""
         background: #ffffff;
         border: 1px solid #e1e8ed;
         border-radius: 12px;
-        padding: 20px;
+        padding: 25px;
         margin: 15px 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
     
     .ai-summary-container p,
     .ai-summary-container div {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
-        font-size: 14px !important;
-        line-height: 1.6 !important;
-        color: #333333 !important;
-        margin: 8px 0 !important;
+        font-size: 15px !important;
+        line-height: 1.7 !important;
+        color: #2d3748 !important;
+        margin: 10px 0 !important;
     }
     
     .ai-summary-container strong {
         font-weight: 600 !important;
-        color: #1f2937 !important;
-    }
-    
-    .ai-summary-title {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
-        font-size: 16px !important;
-        font-weight: 600 !important;
-        color: #1f2937 !important;
-        margin-bottom: 12px !important;
+        color: #1a202c !important;
     }
     
     /* Force consistent text styling for all content within expander */
     .streamlit-expanderContent div,
     .streamlit-expanderContent p {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif !important;
-        font-size: 14px !important;
-        line-height: 1.6 !important;
-        color: #333333 !important;
+        font-size: 15px !important;
+        line-height: 1.7 !important;
+        color: #2d3748 !important;
     }
     
-    /* Fix: Sidebar toggle button - hide the problematic text */
-    button[data-testid="baseButton-header"] span {
-        display: none !important;
-    }
-    
-    button[data-testid="baseButton-header"] {
-        position: relative !important;
-        width: 2.25rem !important;
-        height: 2.25rem !important;
-    }
-    
-    button[data-testid="baseButton-header"]:after {
-        content: "»" !important;
-        position: absolute !important;
-        top: 50% !important;
-        left: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        font-size: 18px !important;
-        font-weight: bold !important;
-        color: #666 !important;
-        font-family: system-ui, -apple-system, sans-serif !important;
-    }
-    
-    /* When sidebar is open, show left arrow */
-    .css-1d391kg button[data-testid="baseButton-header"]:after {
-        content: "«" !important;
-    }
-    
-    /* Fix: Expander arrow icons */
-    .streamlit-expanderHeader svg {
-        display: none !important;
-    }
-    
-    .streamlit-expanderHeader:after {
-        content: "▶" !important;
-        margin-left: 0.5rem !important;
-        font-size: 14px !important;
-        transition: transform 0.2s ease !important;
-        color: #666 !important;
-    }
-    
-    details[open] .streamlit-expanderHeader:after {
-        content: "▼" !important;
-        transform: none !important;
+    /* Error message styling */
+    .error-container {
+        background-color: #fee;
+        border: 1px solid #fcc;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 10px 0;
+        color: #c53030;
     }
     
     /* Responsive design */
     @media (max-width: 768px) {
         .sentiment-bar-single {
-            font-size: 12px;
-            padding: 0 8px;
+            font-size: 14px;
+            padding: 0 10px;
+            height: 35px;
         }
         .sentiment-bar-text {
             font-size: 14px;
@@ -276,29 +224,15 @@ st.markdown("""
         }
         .sentiment-bar-single {
             margin-right: 0;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
+            width: 100%;
         }
     }
 </style>
 """, unsafe_allow_html=True)
 
-def get_api_params(model_name):
-    """Get correct API parameters based on model version"""
-    base_params = {
-        'temperature': 0.3,
-        'timeout': 20
-    }
-    
-    # GPT-5 models use max_completion_tokens instead of max_tokens
-    if model_name.startswith('gpt-5'):
-        base_params['max_completion_tokens'] = 800
-    else:
-        base_params['max_tokens'] = 800
-    
-    return base_params
-
 def capture_analysis_output(token_symbol):
-    """Capture the output from the analysis function with GPT-5 support"""
+    """Capture the output from the analysis function with complete GPT-5 support"""
     stdout_buffer = io.StringIO()
     stderr_buffer = io.StringIO()
     
@@ -309,11 +243,11 @@ def capture_analysis_output(token_symbol):
             max_pages_per_call = ANALYSIS_CONFIG['max_pages_per_call']
             model_name = ANALYSIS_CONFIG['openai_model']
             
-            # Initialize components with model support
+            # Initialize components with explicit model support
             twitter_api = TwitterAPI()
             analyzer = CryptoSentimentAnalyzer(
-                openai_api_key=OPENAI_API_KEY, 
-                model_name=model_name,
+                openai_api_key=OPENAI_API_KEY,
+                model_name=model_name,  # Pass the model name explicitly
                 silent_mode=True
             )
             
@@ -394,7 +328,7 @@ def parse_and_display_price_data(output_text):
     
     price_html = f"""
     <div class="price-container">
-        <h4 style="margin: 0 0 15px 0; text-align: center;">💰站内价格数据总览</h4>
+        <h4 style="margin: 0 0 20px 0; text-align: center;">💰站内价格数据总览</h4>
         <div class="price-grid">
             <div class="price-item">
                 <div class="price-label">💵 当前价格</div>
@@ -415,60 +349,81 @@ def parse_and_display_price_data(output_text):
     return price_html
 
 def create_vertical_sentiment_bars_from_output(output_text):
-    """Create vertical stacked sentiment bars from raw output text - FIXED VERSION"""
+    """Create vertical stacked sentiment bars - COMPLETELY FIXED VERSION"""
     lines = output_text.split('\n')
     
     sentiment_data = {}
     sentiment_section_started = False
     
+    # Debug: Print lines to see what we're working with
+    print("DEBUG: Looking for sentiment data in lines:")
+    for i, line in enumerate(lines):
+        if '🎭 情绪分布:' in line or '正面:' in line or '负面:' in line or '中性:' in line:
+            print(f"Line {i}: {line}")
+    
     for line in lines:
         if '🎭 情绪分布:' in line:
             sentiment_section_started = True
             continue
-        elif sentiment_section_started and line.strip().startswith('✅ 正面:'):
+        elif sentiment_section_started and '正面:' in line:
             try:
-                pos_text = line.split('✅ 正面:')[1].strip()
+                # Handle both formats: "✅ 正面: 24 条 (63.2%)" and "   ✅ 正面: 24 条 (63.2%)"
+                if '✅ 正面:' in line:
+                    pos_text = line.split('✅ 正面:')[1].strip()
+                else:
+                    pos_text = line.split('正面:')[1].strip()
+                
                 pos_count = int(pos_text.split('条')[0].strip())
                 pos_pct_text = pos_text.split('(')[1].split(')')[0]
                 sentiment_data['POSITIVE'] = {
                     'count': pos_count,
                     'percentage': pos_pct_text
                 }
+                print(f"DEBUG: Parsed positive: {sentiment_data['POSITIVE']}")
             except Exception as e:
-                print(f"Error parsing positive sentiment: {e}")
+                print(f"DEBUG: Error parsing positive sentiment: {e}")
                 sentiment_data['POSITIVE'] = {'count': 0, 'percentage': '0.0%'}
-        elif sentiment_section_started and line.strip().startswith('❌ 负面:'):
+        elif sentiment_section_started and '负面:' in line:
             try:
-                neg_text = line.split('❌ 负面:')[1].strip()
+                if '❌ 负面:' in line:
+                    neg_text = line.split('❌ 负面:')[1].strip()
+                else:
+                    neg_text = line.split('负面:')[1].strip()
+                
                 neg_count = int(neg_text.split('条')[0].strip())
                 neg_pct_text = neg_text.split('(')[1].split(')')[0]
                 sentiment_data['NEGATIVE'] = {
                     'count': neg_count,
                     'percentage': neg_pct_text
                 }
+                print(f"DEBUG: Parsed negative: {sentiment_data['NEGATIVE']}")
             except Exception as e:
-                print(f"Error parsing negative sentiment: {e}")
+                print(f"DEBUG: Error parsing negative sentiment: {e}")
                 sentiment_data['NEGATIVE'] = {'count': 0, 'percentage': '0.0%'}
-        elif sentiment_section_started and line.strip().startswith('⚪ 中性:'):
+        elif sentiment_section_started and '中性:' in line:
             try:
-                neu_text = line.split('⚪ 中性:')[1].strip()
+                if '⚪ 中性:' in line:
+                    neu_text = line.split('⚪ 中性:')[1].strip()
+                else:
+                    neu_text = line.split('中性:')[1].strip()
+                
                 neu_count = int(neu_text.split('条')[0].strip())
                 neu_pct_text = neu_text.split('(')[1].split(')')[0]
                 sentiment_data['NEUTRAL'] = {
                     'count': neu_count,
                     'percentage': neu_pct_text
                 }
+                print(f"DEBUG: Parsed neutral: {sentiment_data['NEUTRAL']}")
             except Exception as e:
-                print(f"Error parsing neutral sentiment: {e}")
+                print(f"DEBUG: Error parsing neutral sentiment: {e}")
                 sentiment_data['NEUTRAL'] = {'count': 0, 'percentage': '0.0%'}
-        elif sentiment_section_started and line.strip() and not line.strip().startswith('   ') and ('🤖' in line or '📈' in line):
+        elif sentiment_section_started and line.strip() and ('🤖' in line or '📈' in line):
             break
     
-    # Debug output
-    print(f"Parsed sentiment_data: {sentiment_data}")
+    print(f"DEBUG: Final sentiment_data: {sentiment_data}")
     
     if not sentiment_data:
-        print("No sentiment data found")
+        print("DEBUG: No sentiment data found, returning empty string")
         return ""
     
     # Get data with defaults
@@ -478,14 +433,16 @@ def create_vertical_sentiment_bars_from_output(output_text):
     
     total = pos_data['count'] + neg_data['count'] + neu_data['count']
     if total == 0:
-        print("Total count is 0")
+        print("DEBUG: Total count is 0, returning empty string")
         return ""
     
-    # Calculate bar widths (max 300px, min 50px for visibility)
-    max_width = 300
-    pos_width = max(50, int((pos_data['count'] / total) * max_width)) if pos_data['count'] > 0 else 50
-    neg_width = max(50, int((neg_data['count'] / total) * max_width)) if neg_data['count'] > 0 else 50
-    neu_width = max(50, int((neu_data['count'] / total) * max_width)) if neu_data['count'] > 0 else 50
+    # Calculate bar widths (max 350px, min 80px for better visibility)
+    max_width = 350
+    min_width = 80
+    
+    pos_width = max(min_width, int((pos_data['count'] / total) * max_width)) if pos_data['count'] > 0 else min_width
+    neg_width = max(min_width, int((neg_data['count'] / total) * max_width)) if neg_data['count'] > 0 else min_width
+    neu_width = max(min_width, int((neu_data['count'] / total) * max_width)) if neu_data['count'] > 0 else min_width
     
     # Create the vertical stacked bars HTML
     bars_html = f"""
@@ -522,7 +479,7 @@ def create_vertical_sentiment_bars_from_output(output_text):
     </div>
     """
     
-    print(f"Generated bars_html length: {len(bars_html)}")
+    print(f"DEBUG: Generated bars_html successfully, length: {len(bars_html)}")
     return bars_html
 
 def parse_table_from_output(output_text, table_title):
@@ -561,9 +518,10 @@ def parse_table_from_output(output_text, table_title):
     return headers, table_data
 
 def display_ai_summary_section(lines):
-    """Display AI summary with consistent formatting"""
+    """Display AI summary with consistent formatting and error handling"""
     ai_summary_started = False
     ai_summary_lines = []
+    error_found = False
     
     for line in lines:
         if '🤖 AI 智能分析摘要:' in line:
@@ -571,16 +529,19 @@ def display_ai_summary_section(lines):
             continue
         elif ai_summary_started and '======' in line:
             continue
-        elif ai_summary_started and '摘要生成失败:' in line:
+        elif ai_summary_started and ('摘要生成失败:' in line or 'OpenAI摘要生成失败:' in line):
             # Handle error case
-            st.error(f"AI分析失败: {line.strip()}")
+            error_message = line.strip()
+            st.markdown("### 🤖 AI 智能分析摘要")
+            st.error(f"AI分析失败: {error_message}")
+            error_found = True
             return
         elif ai_summary_started and line.strip() and not line.startswith('📈'):
             ai_summary_lines.append(line.strip())
         elif ai_summary_started and line.startswith('📈'):
             break
     
-    if ai_summary_lines:
+    if not error_found and ai_summary_lines:
         st.markdown("### 🤖 AI 智能分析摘要")
         
         with st.expander("查看详细分析", expanded=True):
@@ -596,7 +557,8 @@ def display_ai_summary_section(lines):
             
             summary_html += '</div>'
             st.markdown(summary_html, unsafe_allow_html=True)
-    else:
+    elif not error_found:
+        st.markdown("### 🤖 AI 智能分析摘要")
         st.warning("无AI分析摘要数据")
 
 def display_analysis_results(analysis_result, output_text):
@@ -604,7 +566,8 @@ def display_analysis_results(analysis_result, output_text):
     if not analysis_result:
         st.error("分析失败或没有有效数据")
         if output_text:
-            st.text(output_text)
+            with st.expander("查看错误详情"):
+                st.text(output_text)
         return
     
     # Parse the output text
@@ -623,24 +586,23 @@ def display_analysis_results(analysis_result, output_text):
     if price_html:
         st.markdown(price_html, unsafe_allow_html=True)
     else:
-        st.warning("⚠️ 未找到价格数据")
+        st.warning("未找到价格数据")
     
-    # Display sentiment distribution - FIXED
+    # Display sentiment distribution
     st.markdown("### 🎭 情绪分布")
     
     # Check if we have sentiment data
-    has_sentiment_data = any('✅ 正面:' in line or '❌ 负面:' in line or '⚪ 中性:' in line for line in lines)
+    has_sentiment_data = any('正面:' in line or '负面:' in line or '中性:' in line for line in lines)
     
     if has_sentiment_data:
         vertical_bars_html = create_vertical_sentiment_bars_from_output(output_text)
         if vertical_bars_html and vertical_bars_html.strip():
-            # CRITICAL: Use unsafe_allow_html=True
             st.markdown(vertical_bars_html, unsafe_allow_html=True)
         else:
-            st.warning("无法解析情感数据")
+            st.warning("无法解析情感数据，显示原始数据:")
             # Fallback: Show raw sentiment data
             for line in lines:
-                if '✅ 正面:' in line or '❌ 负面:' in line or '⚪ 中性:' in line:
+                if '正面:' in line or '负面:' in line or '中性:' in line:
                     st.text(line.strip())
     else:
         st.warning("未找到情感分析数据")
@@ -734,6 +696,14 @@ def main():
         st.info(f"分析时间范围: 近{ANALYSIS_CONFIG['target_days']}天")
         st.info("数据来源: Twitter API")
         st.info(f"AI模型: {current_model}")
+        
+        # Model status indicator
+        if current_model.startswith('gpt-5'):
+            st.success("🚀 使用 GPT-5 (超快速)")
+        elif current_model == 'gpt-3.5-turbo':
+            st.success("⚡ 使用 GPT-3.5 (快速)")
+        else:
+            st.info("📊 使用标准模型")
     
     # Main input section
     col1, col2 = st.columns([2, 1])
@@ -770,6 +740,11 @@ def main():
         
         # Display results
         st.markdown("---")
+        
+        # Check for specific errors in output
+        if output_text and ("max_tokens" in output_text or "max_completion_tokens" in output_text):
+            st.error("检测到GPT-5 API参数错误。请检查所有组件都已更新为使用 max_completion_tokens")
+            
         display_analysis_results(analysis_result, output_text)
         
         # Show raw output in expandable section for debugging
