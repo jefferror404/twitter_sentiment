@@ -609,10 +609,11 @@ def display_analysis_results(analysis_result, output_text):
         st.markdown("### 🤖 AI 智能分析摘要")
         with st.expander("查看详细分析", expanded=True):
             for line in ai_summary_lines:
-                if line.startswith('   ') and any(char.isdigit() for char in line[:5]):
+                # Check if line starts with a number (numbered list item)
+                if line.strip() and line.strip()[0].isdigit() and '. ' in line[:5]:
                     st.markdown(f"**{line.strip()}**")
-                elif line.strip():
-                    st.write(line.strip())
+                else:
+                    st.markdown(line.strip())
     
     # Display topic analysis
     topics_started = False
