@@ -64,57 +64,96 @@ st.markdown("""
         box-shadow: none !important;
     }
     
-    /* Enhanced sentiment bar styling */
-    .sentiment-bar {
-        height: 50px;
-        border-radius: 12px;
-        overflow: hidden;
+    /* NEW: Vertical sentiment bars container */
+    .sentiment-bars-container {
         display: flex;
-        margin: 15px 0;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-        border: 2px solid #e9ecef;
+        flex-direction: column;
+        gap: 15px;
+        margin: 20px 0;
+        padding: 25px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
     }
-    .sentiment-positive-bar {
-        background-color: #43946c;
+    
+    .sentiment-bar-item {
         display: flex;
         align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 14px;
-        padding: 0 8px;
-        text-align: center;
-        min-width: 0;
-        white-space: nowrap;
-        overflow: hidden;
+        gap: 15px;
+        width: 100%;
     }
-    .sentiment-negative-bar {
-        background-color: #dc3545;
+    
+    .sentiment-text {
+        font-size: 16px;
+        font-weight: 600;
+        min-width: 160px;
         display: flex;
         align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+    
+    .sentiment-emoji {
+        font-size: 18px;
+    }
+    
+    .sentiment-stats {
         font-size: 14px;
-        padding: 0 8px;
-        text-align: center;
-        min-width: 0;
-        white-space: nowrap;
+        opacity: 0.8;
+        margin-left: 5px;
+    }
+    
+    .sentiment-bar-track {
+        flex: 1;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        position: relative;
         overflow: hidden;
     }
-    .sentiment-neutral-bar {
-        background-color: #6c757d;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
+    
+    .sentiment-bar-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.8s ease-out;
+        position: relative;
+    }
+    
+    .sentiment-bar-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        animation: shimmer 2s infinite;
+    }
+    
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+    
+    .sentiment-bar-positive .sentiment-bar-fill {
+        background: linear-gradient(90deg, #43946c 0%, #5cb85c 100%);
+    }
+    
+    .sentiment-bar-negative .sentiment-bar-fill {
+        background: linear-gradient(90deg, #dc3545 0%, #f56565 100%);
+    }
+    
+    .sentiment-bar-neutral .sentiment-bar-fill {
+        background: linear-gradient(90deg, #6c757d 0%, #95a5a6 100%);
+    }
+    
+    .sentiment-percentage {
+        font-size: 16px;
         font-weight: bold;
-        font-size: 14px;
-        padding: 0 8px;
-        text-align: center;
-        min-width: 0;
-        white-space: nowrap;
-        overflow: hidden;
+        min-width: 60px;
+        text-align: right;
+        flex-shrink: 0;
     }
     
     /* Price data styling */
@@ -242,9 +281,19 @@ st.markdown("""
     
     /* Responsive design */
     @media (max-width: 768px) {
-        .sentiment-positive-bar, .sentiment-negative-bar, .sentiment-neutral-bar {
-            font-size: 12px;
+        .sentiment-bars-container {
+            flex-direction: column;
+            text-align: center;
         }
+        
+        .sentiment-bar-item {
+            justify-content: center;
+        }
+        
+        .sentiment-bar-single {
+            min-width: 120px;
+        }
+        
         .price-grid {
             grid-template-columns: 1fr;
         }
@@ -375,8 +424,8 @@ def parse_and_display_price_data(output_text):
     
     return price_html
 
-def create_enhanced_sentiment_bar_chart_from_output(output_text):
-    """🆕 Create sentiment bar chart directly from raw output text - multi-line indented format"""
+def create_vertical_sentiment_bars_from_output(output_text):
+    """Create vertical sentiment bars with proper proportions"""
     lines = output_text.split('\n')
     
     sentiment_data = {}
@@ -390,17 +439,24 @@ def create_enhanced_sentiment_bar_chart_from_output(output_text):
             # Extract from "   ✅ 正面: 24 条 (63.2%)"
             pos_text = line.split('✅ 正面:')[1].strip()
             pos_count = int(pos_text.split('条')[0].strip())
-            sentiment_data['POSITIVE'] = pos_count
+            pos_pct_text = pos_text.split('(')[1].split(')')[0]
+            # Extract percentage value
+            pos_pct_value = float(pos_pct_text.replace('%', ''))
+            sentiment_data['POSITIVE'] = {'count': pos_count, 'pct': pos_pct_text, 'pct_value': pos_pct_value}
         elif sentiment_section_started and line.strip().startswith('❌ 负面:'):
             # Extract from "   ❌ 负面: 7 条 (18.4%)"
             neg_text = line.split('❌ 负面:')[1].strip()
             neg_count = int(neg_text.split('条')[0].strip())
-            sentiment_data['NEGATIVE'] = neg_count
+            neg_pct_text = neg_text.split('(')[1].split(')')[0]
+            neg_pct_value = float(neg_pct_text.replace('%', ''))
+            sentiment_data['NEGATIVE'] = {'count': neg_count, 'pct': neg_pct_text, 'pct_value': neg_pct_value}
         elif sentiment_section_started and line.strip().startswith('⚪ 中性:'):
             # Extract from "   ⚪ 中性: 7 条 (18.4%)"
             neu_text = line.split('⚪ 中性:')[1].strip()
             neu_count = int(neu_text.split('条')[0].strip())
-            sentiment_data['NEUTRAL'] = neu_count
+            neu_pct_text = neu_text.split('(')[1].split(')')[0]
+            neu_pct_value = float(neu_pct_text.replace('%', ''))
+            sentiment_data['NEUTRAL'] = {'count': neu_count, 'pct': neu_pct_text, 'pct_value': neu_pct_value}
         elif sentiment_section_started and line.strip() and not line.strip().startswith('   '):
             # End of sentiment section
             break
@@ -408,47 +464,54 @@ def create_enhanced_sentiment_bar_chart_from_output(output_text):
     if not sentiment_data:
         return ""
     
-    total = sum(sentiment_data.values())
-    if total == 0:
-        return ""
+    # Get data with defaults
+    pos_data = sentiment_data.get('POSITIVE', {'count': 0, 'pct': '0%', 'pct_value': 0})
+    neg_data = sentiment_data.get('NEGATIVE', {'count': 0, 'pct': '0%', 'pct_value': 0})
+    neu_data = sentiment_data.get('NEUTRAL', {'count': 0, 'pct': '0%', 'pct_value': 0})
     
-    pos_count = sentiment_data.get('POSITIVE', 0)
-    neg_count = sentiment_data.get('NEGATIVE', 0)
-    neu_count = sentiment_data.get('NEUTRAL', 0)
+    # Use actual percentage values for width calculation
+    pos_width = pos_data['pct_value']
+    neg_width = neg_data['pct_value']
+    neu_width = neu_data['pct_value']
     
-    pos_pct = (pos_count / total * 100)
-    neg_pct = (neg_count / total * 100)
-    neu_pct = (neu_count / total * 100)
-    
-    # Lower threshold for text display (4% instead of 5%)
-    def get_bar_text(emoji, label, count, pct, min_threshold=4):
-        if pct >= min_threshold:
-            return f"{emoji} {label}: {count} 条 ({pct:.1f}%)"
-        elif pct > 0:
-            return f"{emoji}"  # Just emoji for very small bars
-        else:
-            return ""
-    
-    pos_text = get_bar_text("✅", "正面", pos_count, pos_pct)
-    neg_text = get_bar_text("❌", "负面", neg_count, neg_pct)
-    neu_text = get_bar_text("⚪", "中性", neu_count, neu_pct)
-    
-    # Create the bar chart
-    bar_html = f"""
-    <div class="sentiment-bar">
-        <div class="sentiment-positive-bar" style="width: {pos_pct}%;">
-            {pos_text}
+    # Create the sentiment bars HTML with proper indentation and structure
+    bars_html = f"""<div class="sentiment-bars-container">
+    <div class="sentiment-bar-item sentiment-bar-positive">
+        <div class="sentiment-text">
+            <span class="sentiment-emoji">✅</span>
+            <span>正面情绪</span>
+            <span class="sentiment-stats">{pos_data['count']} 条</span>
         </div>
-        <div class="sentiment-negative-bar" style="width: {neg_pct}%;">
-            {neg_text}
+        <div class="sentiment-bar-track">
+            <div class="sentiment-bar-fill" style="width: {pos_width}%;"></div>
         </div>
-        <div class="sentiment-neutral-bar" style="width: {neu_pct}%;">
-            {neu_text}
-        </div>
+        <div class="sentiment-percentage">{pos_data['pct']}</div>
     </div>
-    """
+    <div class="sentiment-bar-item sentiment-bar-neutral">
+        <div class="sentiment-text">
+            <span class="sentiment-emoji">⚪</span>
+            <span>中性情绪</span>
+            <span class="sentiment-stats">{neu_data['count']} 条</span>
+        </div>
+        <div class="sentiment-bar-track">
+            <div class="sentiment-bar-fill" style="width: {neu_width}%;"></div>
+        </div>
+        <div class="sentiment-percentage">{neu_data['pct']}</div>
+    </div>
+    <div class="sentiment-bar-item sentiment-bar-negative">
+        <div class="sentiment-text">
+            <span class="sentiment-emoji">❌</span>
+            <span>负面情绪</span>
+            <span class="sentiment-stats">{neg_data['count']} 条</span>
+        </div>
+        <div class="sentiment-bar-track">
+            <div class="sentiment-bar-fill" style="width: {neg_width}%;"></div>
+        </div>
+        <div class="sentiment-percentage">{neg_data['pct']}</div>
+    </div>
+</div>"""
     
-    return bar_html
+    return bars_html
 
 def parse_table_from_output(output_text, table_title):
     """🆕 Parse table data directly from raw output text"""
@@ -513,13 +576,13 @@ def display_analysis_results(analysis_result, output_text):
     else:
         st.warning("⚠️ 未找到价格数据格式")
     
-    # 🆕 Display sentiment distribution using data from raw output (fixed for multi-line indented format)
+    # 🆕 Display sentiment distribution using vertical bars
     st.markdown("### 🎭 情绪分布")
     
-    # Use the new function that extracts from multi-line indented output
-    enhanced_bar_chart_html = create_enhanced_sentiment_bar_chart_from_output(output_text)
-    if enhanced_bar_chart_html:
-        st.markdown(enhanced_bar_chart_html, unsafe_allow_html=True)
+    # Use the new vertical bars function
+    vertical_bars_html = create_vertical_sentiment_bars_from_output(output_text)
+    if vertical_bars_html:
+        st.markdown(vertical_bars_html, unsafe_allow_html=True)
     else:
         st.warning("⚠️ 未找到情感分析数据格式")
         st.text("期望格式:")
